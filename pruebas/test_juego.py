@@ -192,7 +192,7 @@ class PruebasRonda(Base):
         self.a(tipo="asignar_banco")
         self.assertEqual(self.j.estado["puntajes"], [0, 100])
 
-    def test_pasar_turno_y_sugerencia(self):
+    def test_pasar_turno(self):
         self.ronda_hasta_juego(ganador=0, jugar=False)
         self.assertEqual(self.j.estado["ronda"]["control"], 1)
 

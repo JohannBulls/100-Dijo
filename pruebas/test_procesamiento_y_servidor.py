@@ -55,9 +55,10 @@ class PruebasProcesamiento(unittest.TestCase):
             self.assertEqual(sorted(filas), sorted(esperadas), f"Pregunta {p['numero']}")
             self.assertEqual(p["respuestas_validas"] + p["respuestas_excluidas"], len(esperadas))
             textos = {r["fila"]: r["texto"].strip() for r in por_num[p["numero"]]["respuestas"] if r["texto"]}
+            privados = procesar_excel.leer_nombres_privados().get(str(p["numero"]), {})
             for a in p["respuestas"]:
-                for o in a["originales"]:
-                    self.assertEqual(o["texto"], textos[o["fila"]])  # trazabilidad exacta
+                for o in a["originales"]:  # trazabilidad exacta (con los nombres de personas ocultos)
+                    self.assertEqual(o["texto"], procesar_excel.anonimizar(textos[o["fila"]], privados.get(a["etiqueta"])))
 
     def test_frecuencias_reales_y_orden(self):
         for p in self.res["preguntas"]:
@@ -77,7 +78,9 @@ class PruebasProcesamiento(unittest.TestCase):
         p = {x["numero"]: x for x in self.res["preguntas"]}
         self.assertEqual(p[4]["respuestas"][0]["etiqueta"], "Había trancón")
         self.assertEqual(p[4]["respuestas"][0]["frecuencia"], 28)
-        self.assertEqual([a["puntos"] for a in p[4]["respuestas"] if a["en_tablero"]], [88, 6, 6])  # 28, 2, 2 personas
+        tablero4 = [a for a in p[4]["respuestas"] if a["en_tablero"]]
+        self.assertEqual([a["frecuencia"] for a in tablero4], [28, 4, 2, 2])   # P4 mejorada: 4 respuestas
+        self.assertEqual([a["puntos"] for a in tablero4], procesar_excel.repartir_100([28, 4, 2, 2]))
         self.assertEqual(p[6]["respuestas_excluidas"], 10)  # respuestas fuera de tema en «tipo de oso»
 
     # ---------------------------------------------------------------- puntuación: 100 por pregunta
@@ -109,10 +112,11 @@ class PruebasProcesamiento(unittest.TestCase):
     def test_cada_pregunta_habilitada_suma_exactamente_100(self):
         for p in self.res["preguntas"]:
             tablero = [a for a in p["respuestas"] if a["en_tablero"]]
-            self.assertTrue(p["habilitada"])
+            if not p["habilitada"]:
+                continue
             self.assertEqual(sum(a["puntos"] for a in tablero), 100, p["numero"])
             self.assertEqual(p["puntos_tablero"], 100)
-            self.assertTrue(1 <= len(tablero) <= 8)
+            self.assertTrue(4 <= len(tablero) <= 10)
             for a in tablero:
                 self.assertIsInstance(a["puntos"], int)
                 self.assertGreaterEqual(a["puntos"], 1)
@@ -126,7 +130,7 @@ class PruebasProcesamiento(unittest.TestCase):
         for p in self.res["preguntas"]:
             n = p["respuestas_en_tablero"]
             por_tamano.setdefault(n, []).append(sum(a["puntos"] for a in p["respuestas"] if a["en_tablero"]))
-        for n in (3, 4, 5, 6, 8):                              # existen tableros de 3, 4, 5, 6 y 8 respuestas
+        for n in (4, 5, 6, 8, 10):                             # existen tableros de 4, 5, 6, 8 y 10 respuestas
             self.assertIn(n, por_tamano)
             self.assertEqual(set(por_tamano[n]), {100}, n)
 
@@ -202,11 +206,15 @@ class PruebasProcesamiento(unittest.TestCase):
 
     def test_reformulaciones_registradas_y_originales_intactos(self):
         _, a = self.buscar(23, "¡Hágame un catorce!")
-        self.assertEqual(a["reformulacion"]["etiqueta_original"], "Nico, un catorce")
-        self.assertEqual([o["texto"] for o in a["originales"]], ["Nico un catorce"])
-        etiquetas = " ".join(a["etiqueta"] for p in self.res["preguntas"] for a in p["respuestas"])
-        for nombre in ("Doriam", "Nico", "Abelardo"):  # nombres propios fuera de lo que se muestra en pantalla
-            self.assertNotIn(nombre, etiquetas)
+        self.assertEqual(a["reformulacion"]["etiqueta_original"], "[nombre], un catorce")
+        self.assertEqual([o["texto"] for o in a["originales"]], ["[nombre] un catorce"])
+        # Los nombres reales están solo en el archivo privado (no publicado): no pueden aparecer en nada generado.
+        privados = procesar_excel.leer_nombres_privados()
+        nombres = [n for q in privados.values() for lista in q.values() for n in lista]
+        self.assertTrue(nombres, "falta datos/privado/nombres_a_ocultar.json")
+        generado = json.dumps(self.res, ensure_ascii=False)
+        for n in nombres:
+            self.assertNotRegex(generado, r"(?i)\b" + n + r"\b")
 
 
 class PruebasServidor(unittest.TestCase):
@@ -275,10 +283,11 @@ class PruebasServidor(unittest.TestCase):
         self.accion({"tipo": "primero_en_responder", "equipo": 1})
         self.accion({"tipo": "respuesta_cara_a_cara", "equipo": 1, "respuesta_id": ids[0]})
         pub = self.get("/api/publico")
+        pts = [a["puntos"] for a in p["respuestas"]]
         self.assertEqual(pub["ronda"]["casillas"][0], {"posicion": 1, "revelada": True, "texto": "Había trancón",
-                                                       "puntos": 88, "equipo": 1, "como": "cara_a_cara"})
-        self.assertEqual(pub["ronda"]["banco"], 88)
-        self.accion({"tipo": "ganador_cara_a_cara", "equipo": 1})
+                                                       "puntos": pts[0], "equipo": 1, "como": "cara_a_cara"})
+        self.assertEqual(pub["ronda"]["banco"], pts[0])
+        self.assertEqual(pub["fase"], "decision")      # la respuesta n.º 1 gana el cara a cara automáticamente
         self.accion({"tipo": "decidir", "jugar": True})
         v = self.get("/api/presentador")["version"]   # doble clic: misma versión dos veces → la segunda se rechaza
         self.assertEqual(self.accion({"tipo": "strike"}, v)[0], 200)
@@ -287,12 +296,11 @@ class PruebasServidor(unittest.TestCase):
         self.accion({"tipo": "strike"})
         self.accion({"tipo": "strike"})
         self.assertEqual(self.get("/api/publico")["fase"], "robo")
-        self.assertEqual(p["respuestas"][1]["puntos"], 6)
-        self.accion({"tipo": "resolver_robo", "respuesta_id": ids[1]})  # robo exitoso: 88 + 6 (una sola vez)
+        self.accion({"tipo": "resolver_robo", "respuesta_id": ids[1]})  # robo exitoso: n.º 1 + n.º 2 (una sola vez)
         self.accion({"tipo": "asignar_banco"})
-        self.assertEqual(self.get("/api/publico")["puntajes"], [94, 0])
+        self.assertEqual(self.get("/api/publico")["puntajes"], [pts[0] + pts[1], 0])
         self.assertEqual(self.accion({"tipo": "asignar_banco"})[0], 409)
-        self.assertEqual(self.get("/api/publico")["puntajes"], [94, 0])
+        self.assertEqual(self.get("/api/publico")["puntajes"], [pts[0] + pts[1], 0])
 
     def test_16_recargar_o_reiniciar_conserva_toda_la_partida(self):
         self.preparar(["Ana", "Luis", "Caro", "Pedro", "Sofía", "Juan"])
