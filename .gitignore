@@ -11,3 +11,6 @@ __pycache__/
 # Partida en curso (se crea al jugar)
 datos/partida_guardada.json
 datos/partida_guardada.json.tmp
+
+# Datos privados (nombres a ocultar en las respuestas): no se publican
+datos/privado/

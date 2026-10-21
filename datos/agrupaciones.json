@@ -1,5 +1,5 @@
 {
- "descripcion": "Decisiones de agrupación. Cada grupo lista las respuestas originales (fila del Excel y texto) que forman una respuesta consolidada. Para corregir una agrupación, mueve el objeto {fila, texto} de un grupo a otro (o crea un grupo nuevo) y vuelve a ejecutar PROCESAR_EXCEL.bat. Campos opcionales por grupo: «reformulacion» (etiqueta suavizada y motivo; el texto original se conserva), «revision_contenido» (motivo; la respuesta se cuenta pero no va al tablero hasta revisarla; bórralo para aprobarla) y «nota_contenido» (nota informativa).",
+ "descripcion": "Decisiones de agrupación. Cada grupo lista las respuestas originales (fila del Excel y texto) que forman una respuesta consolidada. Para corregir una agrupación, mueve el objeto {fila, texto} de un grupo a otro (o crea un grupo nuevo) y vuelve a ejecutar PROCESAR_EXCEL.bat. Campos opcionales por grupo: «reformulacion» (etiqueta suavizada y motivo; el texto original se conserva), «revision_contenido» (motivo; la respuesta se cuenta pero no va al tablero hasta revisarla; bórralo para aprobarla) y «nota_contenido» (nota informativa). Campos opcionales por pregunta: «texto_juego» (redacción corregida que se muestra en el juego; el texto original del Excel se conserva) y «revision_jugabilidad» (estado «mejorada» o «pendiente», detalle y propuesta). Por grupo: «criterio» (cómo aceptar variantes; si falta, se genera a partir de los datos). «anonimizado»: el texto original nombra a una persona y se muestra como [nombre]; los nombres reales están en datos/privado/nombres_a_ocultar.json, que no se publica.",
  "preguntas": {
   "1": {
    "pregunta": "Menciona algo que haces cuando crees que nadie te está viendo.",
@@ -1121,26 +1121,6 @@
      ]
     },
     {
-     "etiqueta": "No pasaba el bus",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 7,
-       "texto": "No pasaba el bus"
-      }
-     ]
-    },
-    {
-     "etiqueta": "El transporte",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 8,
-       "texto": "El transporte"
-      }
-     ]
-    },
-    {
      "etiqueta": "Se me quedó algo",
      "nota": null,
      "respuestas": [
@@ -1161,26 +1141,6 @@
      ]
     },
     {
-     "etiqueta": "Se varó el bus",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 24,
-       "texto": "Se varo el bus"
-      }
-     ]
-    },
-    {
-     "etiqueta": "Se me varó la moto",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 40,
-       "texto": "Se me varo la moto"
-      }
-     ]
-    },
-    {
      "etiqueta": "Se fue la luz",
      "nota": null,
      "respuestas": [
@@ -1197,6 +1157,28 @@
       {
        "fila": 41,
        "texto": "un niño flotó sobre mi y voló un auto con su rayo láser"
+      }
+     ]
+    },
+    {
+     "etiqueta": "Problemas con el transporte",
+     "nota": "Une las excusas de transporte que no son trancón: el bus no pasaba o se varó, se varó la moto, «el transporte».",
+     "respuestas": [
+      {
+       "fila": 7,
+       "texto": "No pasaba el bus"
+      },
+      {
+       "fila": 8,
+       "texto": "El transporte"
+      },
+      {
+       "fila": 24,
+       "texto": "Se varo el bus"
+      },
+      {
+       "fila": 40,
+       "texto": "Se me varo la moto"
       }
      ]
     }
@@ -1227,7 +1209,13 @@
      "tipo": "ambigua",
      "detalle": "Fila 41: excusa absurda/en broma; se conservó"
     }
-   ]
+   ],
+   "revision_jugabilidad": {
+    "estado": "mejorada",
+    "detalle": "Tenía 3 respuestas con 2+ personas. Se unieron 4 excusas de transporte (bus que no pasa o se vara, moto varada, «el transporte») en «Problemas con el transporte».",
+    "propuesta": "Revisa si apruebas la unión. Aviso: «Había trancón» concentra casi toda la encuesta (28 de 36), así que el cara a cara suele decidirse con la primera respuesta."
+   },
+   "texto_juego": "¿Qué excusa común usa la gente para llegar tarde al trabajo?"
   },
   "5": {
    "pregunta": "¿A quién no le abrirías la puerta de tu casa?",
@@ -1828,7 +1816,8 @@
      "tipo": "posible_fusion",
      "detalle": "'Panda' y 'Panda rojo' podrían unirse; se dejaron separadas"
     }
-   ]
+   ],
+   "texto_juego": "Menciona un tipo de oso."
   },
   "7": {
    "pregunta": "Menciona un lugar donde sería muy inapropiado soltar un gas (Flatulencia, Peo).",
@@ -2140,7 +2129,8 @@
      "tipo": "ambigua",
      "detalle": "Fila 10 'Baño': respuesta poco lógica para la pregunta; se conservó"
     }
-   ]
+   ],
+   "texto_juego": "Menciona un lugar donde sería muy inapropiado soltar un gas (flatulencia, peo)."
   },
   "8": {
    "pregunta": "Menciona una mentira típica que la gente dice en una primera cita.",
@@ -3008,7 +2998,8 @@
      "tipo": "otra",
      "detalle": "Fila 24 'Monedas' se unió a 'Dinero'; revisar"
     }
-   ]
+   ],
+   "texto_juego": "¿Qué objeto no puede faltar en el bolso o la billetera de una persona?"
   },
   "11": {
    "pregunta": "Menciona una razón por la que te podrían terminar corriendo de una boda.",
@@ -4323,7 +4314,13 @@
      "tipo": "otra",
      "detalle": "Neurocirujano (31) y Oncólogo (43) se unieron a Médico por ser especialidades médicas"
     }
-   ]
+   ],
+   "revision_jugabilidad": {
+    "estado": "pendiente",
+    "detalle": "Solo 3 respuestas con respaldo (Médico 28, Ingeniero 4, Abogado 2). Las demás las dijo una persona cada una y no expresan la misma idea.",
+    "propuesta": "Opciones: (a) aceptarla con 3 respuestas como excepción; (b) unir «Abogado» y «Juez» (3) y seguir con 3; (c) reemplazarla. Médico concentra el 82 %."
+   },
+   "texto_juego": "¿Qué profesión causa más respeto en la sociedad?"
   },
   "15": {
    "pregunta": "Menciona un electrodomestico que no puede faltar en la cocina.",
@@ -4548,7 +4545,8 @@
      "tipo": "contenido",
      "detalle": "«Una mujer»: Chiste sexista (trata a una mujer como electrodoméstico). No se puede suavizar sin cambiar su sentido. Se cuenta en la frecuencia, pero no se muestra en el tablero hasta que lo revises."
     }
-   ]
+   ],
+   "texto_juego": "Menciona un electrodoméstico que no puede faltar en la cocina."
   },
   "16": {
    "pregunta": "Menciona qué haces cuando se va la luz y te quedas sin batería en el celular.",
@@ -5629,7 +5627,12 @@
     }
    ],
    "excluidas": [],
-   "revision": []
+   "revision": [],
+   "revision_jugabilidad": {
+    "estado": "pendiente",
+    "detalle": "Solo 3 respuestas con respaldo (funeral 23, misa 7, reunión de trabajo 5). Las demás (bus, teatro, colonoscopia…) son únicas.",
+    "propuesta": "Opciones: (a) aceptarla con 3 respuestas como excepción; (b) reemplazarla."
+   }
   },
   "20": {
    "pregunta": "Que palabra dice la gente con mas frecuencia al contestar el telefono.",
@@ -5836,13 +5839,14 @@
      "respuestas": [
       {
        "fila": 41,
-       "texto": "Hablo con Doriam?"
+       "texto": "Hablo con [nombre]?"
       }
      ],
      "reformulacion": {
-      "etiqueta_original": "¿Hablo con Doriam?",
+      "etiqueta_original": "¿Hablo con [nombre]?",
       "motivo": "Se omite el nombre propio de una persona."
-     }
+     },
+     "anonimizado": true
     }
    ],
    "excluidas": [],
@@ -5857,9 +5861,15 @@
     },
     {
      "tipo": "reformulada",
-     "detalle": "«¿Hablo con Doriam?» se muestra como «¿Hablo con…?». Se omite el nombre propio de una persona."
+     "detalle": "«¿Hablo con [nombre]?» se muestra como «¿Hablo con…?». Se omite el nombre propio de una persona."
     }
-   ]
+   ],
+   "revision_jugabilidad": {
+    "estado": "pendiente",
+    "detalle": "Solo 2 respuestas con respaldo: «Aló» (30) y «Hola» (6). Bueno, ¿Sí?, Saludos, Hum y ¿Hablo con…? las dijo una persona cada una.",
+    "propuesta": "No se puede llegar a 4 sin usar respuestas de una sola persona. Si quieres conservarla, podrías aprobar añadir «Bueno» y «¿Sí?» (1 persona cada una, típicas al contestar); si no, reemplázala."
+   },
+   "texto_juego": "¿Qué palabra dice la gente con más frecuencia al contestar el teléfono?"
   },
   "21": {
    "pregunta": "¿Qué sonido o palabra dices cuando te pegas en el dedo chiquito del pie contra un mueble?",
@@ -6731,13 +6741,14 @@
      "respuestas": [
       {
        "fila": 32,
-       "texto": "Nico un catorce"
+       "texto": "[nombre] un catorce"
       }
      ],
      "reformulacion": {
-      "etiqueta_original": "Nico, un catorce",
+      "etiqueta_original": "[nombre], un catorce",
       "motivo": "Se omite el nombre de una persona concreta; se conserva la idea (pedir un favor)."
-     }
+     },
+     "anonimizado": true
     },
     {
      "etiqueta": "No insisto",
@@ -6805,7 +6816,7 @@
     },
     {
      "tipo": "reformulada",
-     "detalle": "«Nico, un catorce» se muestra como «¡Hágame un catorce!». Se omite el nombre de una persona concreta; se conserva la idea (pedir un favor)."
+     "detalle": "«[nombre], un catorce» se muestra como «¡Hágame un catorce!». Se omite el nombre de una persona concreta; se conserva la idea (pedir un favor)."
     }
    ]
   },
@@ -7135,7 +7146,8 @@
      "tipo": "excluida",
      "detalle": "Muchas respuestas 'No sé'/'Nada'/'No uso' (filas 5,8,10,18,19,22,25,30,33,35,36,37,38,39,41)"
     }
-   ]
+   ],
+   "texto_juego": "¿Cuál es la mentira más común que dicen los vendedores sobre el uso que le dan a Chatter (Salesforce)?"
   },
   "25": {
    "pregunta": "Inventa un nombre gracioso o pasivo-agresivo para ponerle a una \"Oportunidad Perdida\" en el sistema",
@@ -7540,7 +7552,13 @@
      "tipo": "excluida",
      "detalle": "Filas 30, 33, 36, 37 excluidas; 'Nn' y 'OP' podrían conservarse si se consideran nombres"
     }
-   ]
+   ],
+   "revision_jugabilidad": {
+    "estado": "pendiente",
+    "detalle": "Pide inventar un nombre: 36 respuestas casi todas únicas (solo «Gracias, guerrera» se repite, 2). Es imposible de adivinar.",
+    "propuesta": "Reemplázala. Mejor úsala como dinámica aparte (leer los nombres más graciosos), no como pregunta del tablero."
+   },
+   "texto_juego": "Inventa un nombre gracioso o pasivo-agresivo para ponerle a una «Oportunidad perdida» en el sistema."
   },
   "26": {
    "pregunta": "Menciona una actividad horrible que preferirías hacer mil veces antes que limpiar datos duplicados en Salesforce.",
@@ -7644,26 +7662,6 @@
      ]
     },
     {
-     "etiqueta": "Limpiar canaletas",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 6,
-       "texto": "Limpiar canaletas de agua posada"
-      }
-     ]
-    },
-    {
-     "etiqueta": "Planchar",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 7,
-       "texto": "Planchar"
-      }
-     ]
-    },
-    {
      "etiqueta": "Cocinar",
      "nota": null,
      "respuestas": [
@@ -7714,26 +7712,6 @@
      ]
     },
     {
-     "etiqueta": "Asear mi habitación",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 15,
-       "texto": "asear mi habitación exaustivamente"
-      }
-     ]
-    },
-    {
-     "etiqueta": "Limpiar las juntas de la casa",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 17,
-       "texto": "Limpiar las juntas de toda la casa"
-      }
-     ]
-    },
-    {
      "etiqueta": "Borrar todo",
      "nota": null,
      "respuestas": [
@@ -7750,16 +7728,6 @@
       {
        "fila": 21,
        "texto": "Madrugar a estudiar"
-      }
-     ]
-    },
-    {
-     "etiqueta": "Doblar ropa",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 26,
-       "texto": "Doblar ropa"
       }
      ]
     },
@@ -7790,16 +7758,6 @@
       {
        "fila": 33,
        "texto": "Tocar violín"
-      }
-     ]
-    },
-    {
-     "etiqueta": "Barrer",
-     "nota": null,
-     "respuestas": [
-      {
-       "fila": 37,
-       "texto": "barrer"
       }
      ]
     },
@@ -7842,6 +7800,42 @@
        "texto": "atender clientes cansones"
       }
      ]
+    },
+    {
+     "etiqueta": "Limpiar la casa",
+     "nota": "Une tareas de limpieza general de la casa (barrer, asear la habitación, limpiar juntas o canaletas).",
+     "respuestas": [
+      {
+       "fila": 6,
+       "texto": "Limpiar canaletas de agua posada"
+      },
+      {
+       "fila": 15,
+       "texto": "asear mi habitación exaustivamente"
+      },
+      {
+       "fila": 17,
+       "texto": "Limpiar las juntas de toda la casa"
+      },
+      {
+       "fila": 37,
+       "texto": "barrer"
+      }
+     ]
+    },
+    {
+     "etiqueta": "Planchar o doblar ropa",
+     "nota": "Une las tareas de arreglar la ropa.",
+     "respuestas": [
+      {
+       "fila": 7,
+       "texto": "Planchar"
+      },
+      {
+       "fila": 26,
+       "texto": "Doblar ropa"
+      }
+     ]
     }
    ],
    "excluidas": [
@@ -7875,7 +7869,12 @@
      "tipo": "excluida",
      "detalle": "Filas 28, 30, 36, 38 no responden la pregunta"
     }
-   ]
+   ],
+   "revision_jugabilidad": {
+    "estado": "mejorada",
+    "detalle": "Tenía 3 respuestas con 2+ personas. Se unieron tareas de limpieza general de la casa («Limpiar la casa», 4) y de arreglo de ropa («Planchar o doblar ropa», 2).",
+    "propuesta": "Revisa si apruebas las uniones; «Lavar la loza» y «Lavar el baño» se mantienen separadas porque son las más mencionadas."
+   }
   },
   "27": {
    "pregunta": "¿Qué palabra (o grosería) murmuras cuando intentas crear un reporte en Salesforce y los filtros no te dan nada de lo que buscas?",
@@ -8872,7 +8871,8 @@
      "tipo": "excluida",
      "detalle": "Filas 9 y 30 excluidas"
     }
-   ]
+   ],
+   "texto_juego": "¿Qué es lo que realmente pasa por tu mente cuando el cliente dice: «Es un cambio súper sencillo, es solo agregar un campito»?"
   },
   "31": {
    "pregunta": "Menciona la excusa más rápida que dices cuando a un usuario le falla algo en la demo en vivo.",
@@ -11602,7 +11602,12 @@
      "tipo": "otra",
      "detalle": "Fila 32 escrita como 'Jueputa, La cargué'; se interpretó 'la cagué'"
     }
-   ]
+   ],
+   "revision_jugabilidad": {
+    "estado": "pendiente",
+    "detalle": "«Borrarla» concentra 32 de 41 respuestas; la segunda («Reírse») tiene 2 y el resto son únicas. Hay una sola respuesta evidente.",
+    "propuesta": "Reemplázala. Reformular la redacción no cambia las respuestas ya recogidas."
+   }
   },
   "40": {
    "pregunta": "Menciona qué haces cuando le das un mordisco a una comida que alguien te invitó, sabe horrible, pero te están mirando fijamente.",
@@ -12857,7 +12862,8 @@
      "tipo": "posible_fusion",
      "detalle": "'Historias con los clientes', 'La charla' y 'El chisme' podrían unirse"
     }
-   ]
+   ],
+   "texto_juego": "Menciona algo que no puede faltar en una fiesta de cumpleaños de la empresa."
   },
   "44": {
    "pregunta": "Menciona una frase o acción que siempre se escucha en una reunión virtual.",
@@ -14075,7 +14081,12 @@
      "tipo": "otra",
      "detalle": "Pregunta muy dispersa: casi todas las respuestas son únicas"
     }
-   ]
+   ],
+   "revision_jugabilidad": {
+    "estado": "pendiente",
+    "detalle": "32 respuestas casi todas únicas (solo «Casuística» se repite, 2): cada persona dio una palabra distinta.",
+    "propuesta": "Reemplázala, o conviértela en una dinámica aparte (adivinar qué palabras dijeron los compañeros)."
+   }
   },
   "48": {
    "pregunta": "Menciona algo que la gente publica en redes para dar envidia.",
@@ -14608,7 +14619,8 @@
      "tipo": "excluida",
      "detalle": "Fila 10 'Por fin' excluida"
     }
-   ]
+   ],
+   "texto_juego": "Menciona algo que la gente hace el día que le pagan el sueldo."
   },
   "51": {
    "pregunta": "Menciona algo que la gente esconde cuando llegan visitas sin avisar.",
