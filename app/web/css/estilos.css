@@ -384,3 +384,34 @@ textarea.buscador { resize: vertical; }
 .mult { display: inline-flex; align-items: center; gap: 4px; background: #0b1220; border: 1px solid #475569; border-radius: 8px; padding: 6px 8px; font-weight: 700; }
 .mult input { width: 56px; background: #111827; color: #fff; border: 1px solid #475569; border-radius: 6px; padding: 6px; font: inherit; }
 .tabla tr.fila-extra td { background: #2a1a05; }
+
+/* ===== Identidad 100 Dijeron: logotipo e icono ===== */
+.logo { display: flex; align-items: center; gap: .8vw; }
+.logo img { height: 6vh; width: auto; filter: drop-shadow(0 .4vh .6vh rgba(0,0,0,.5)); }
+.logo-portada { display: block; height: 36vh; max-width: 80vw; margin: 0 auto 1vh; filter: drop-shadow(0 1.5vh 3vh rgba(0,0,0,.55));
+  animation: entrar .7s cubic-bezier(.2,.9,.3,1.3) both; }
+.logo-portada.chico { height: 22vh; }
+.logo-inicio { display: block; width: min(440px, 80vw); margin: 0 auto 12px; filter: drop-shadow(0 10px 24px rgba(0,0,0,.5)); }
+.icono-panel { height: 34px; width: auto; }
+.sin-animaciones .logo-portada { animation: none; }
+
+/* ===== Cara a cara: intentos por líder y equipo ganador ===== */
+.errores-cac { font-size: 1.9vh; font-weight: 700; background: rgba(0,0,0,.25); padding: .5vh .9vw; border-radius: 999px; }
+.errores-cac span { display: inline-block; margin-left: .4vw; font-family: var(--fuente-titulo); font-size: 2.6vh; color: rgba(255,255,255,.25); }
+.errores-cac span.usado { color: var(--rojo); text-shadow: 0 0 1.5vh rgba(239,68,68,.8); }
+.equipo.gana-cac { animation: gana-cac 2.4s ease-out; }
+@keyframes gana-cac {
+  0% { box-shadow: 0 0 0 0 rgba(251,191,36,.9); transform: scale(1); }
+  20% { transform: scale(1.08); }
+  40% { box-shadow: 0 0 0 4vh rgba(251,191,36,0); transform: scale(1.03); }
+  100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); transform: scale(1.03); }
+}
+.sin-animaciones .equipo.gana-cac { animation: none; }
+
+/* ===== Panel: cara a cara y guía de aceptación ===== */
+.marcador-p .eq small { display: block; margin-top: 4px; }
+.x-usada { color: #f87171; font-weight: 900; } .x-libre { color: rgba(255,255,255,.3); font-weight: 900; }
+.le-toca { color: var(--oro); font-weight: 800; letter-spacing: .5px; }
+.resp .acepta { grid-column: 2 / -1; font-size: 13px; color: #d1fae5; background: rgba(22,101,52,.25); border-left: 3px solid #16a34a;
+  padding: 6px 8px; border-radius: 6px; }
+.resp .acepta .criterio { color: #94a3b8; margin-top: 3px; }

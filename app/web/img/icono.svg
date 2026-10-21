@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Icono de «100 Dijeron» (pestaña del navegador). Original, licencia MIT. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b82f6"/><stop offset="1" stop-color="#1e3a8a"/></linearGradient>
+  </defs>
+  <path d="M10 4 H54 a8 8 0 0 1 8 8 V40 a8 8 0 0 1 -8 8 H28 L16 60 L18 48 H10 a8 8 0 0 1 -8 -8 V12 a8 8 0 0 1 8 -8 Z"
+        fill="url(#g)" stroke="#fbbf24" stroke-width="3"/>
+  <text x="32" y="36" text-anchor="middle" font-family="Impact, Arial Narrow, sans-serif" font-size="24" font-weight="700"
+        fill="#fbbf24" stroke="#7c2d12" stroke-width="1.5" paint-order="stroke">100</text>
+</svg>

@@ -3,13 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Inicio del juego</title>
+<title>100 Dijeron</title>
+<link rel="icon" type="image/svg+xml" href="img/icono.svg">
+<meta name="description" content="100 Dijeron: juego de concurso «¿qué respondió la gente?» para reuniones en Google Meet.">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body class="inicio">
 <div class="caja">
-  <h1 id="titulo">Juego de encuestas</h1>
+  <img class="logo-inicio" src="img/logo.svg" alt="100 Dijeron">
+  <h1 id="titulo" class="oculto">100 Dijeron</h1>
   <p>Abre <b>dos ventanas</b>: la pantalla pública (la que compartes en Google Meet) y el panel privado (para controlar el juego). Las dos se sincronizan solas.</p>
   <div class="botones">
     <a class="tarjeta publica" href="/publico" target="pantalla_publica">
@@ -24,7 +27,12 @@
   <p class="aviso">Para cerrar el juego, cierra la ventana negra del servidor. La partida queda guardada automáticamente.</p>
 </div>
 <script>
-fetch("/api/publico").then((r) => r.json()).then((e) => { document.getElementById("titulo").textContent = e.titulo; document.title = e.titulo; }).catch(() => {});
+fetch("/api/publico").then((r) => r.json()).then((e) => {
+  const t = document.getElementById("titulo");
+  t.textContent = e.titulo;
+  t.classList.toggle("oculto", e.titulo === "100 Dijeron"); // el logotipo ya dice «100 Dijeron»
+  document.title = e.titulo;
+}).catch(() => {});
 </script>
 </body>
 </html>
