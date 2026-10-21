@@ -3,7 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Pantalla del concurso</title>
+<title>100 Dijeron</title>
+<link rel="icon" type="image/svg+xml" href="img/icono.svg">
+<meta name="description" content="100 Dijeron: juego de concurso «¿qué respondió la gente?» para reuniones en Google Meet.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/estilos.css">
@@ -11,7 +13,7 @@
 <body>
 <main class="escenario" id="escenario">
   <header class="barra-superior">
-    <div class="logo" id="logo">…</div>
+    <div class="logo"><img src="img/icono.svg" alt=""><span id="logo">100 Dijeron</span></div>
     <div class="info-ronda">
       <span class="chip" id="chip-ronda">Ronda –</span>
       <span class="chip multi oculto" id="chip-multi">×2</span>
@@ -27,6 +29,7 @@
       <div class="nombre-eq" id="nombre0"></div>
       <div class="puntaje" id="puntos0">0</div>
       <div class="lider" id="lider0"></div>
+      <div class="errores-cac oculto" id="err0"></div>
     </div>
     <div class="tablero" id="tablero"></div>
     <div class="equipo e1" id="eq1">
@@ -34,6 +37,7 @@
       <div class="nombre-eq" id="nombre1"></div>
       <div class="puntaje" id="puntos1">0</div>
       <div class="lider" id="lider1"></div>
+      <div class="errores-cac oculto" id="err1"></div>
     </div>
   </section>
 

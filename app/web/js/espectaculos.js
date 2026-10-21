@@ -150,7 +150,9 @@ const Espectaculo = (() => {
       await esperar(2600);
       if (!vigente(t)) return;
     }
-    capa().innerHTML = `<div class="esp-aviso"><div class="esp-icono">🎡</div><h2 class="esp-titulo">Sorteo de líderes</h2><div class="esp-sub">${e(titulo)} · Ciclo ${info.ciclo}</div></div>`;
+    const cambio = info.motivo === "cambio_cara_a_cara";
+    capa().innerHTML = `<div class="esp-aviso"><div class="esp-icono">🎡</div><h2 class="esp-titulo">${cambio ? "¡Cambio de líderes!" : "Sorteo de líderes"}</h2>
+      <div class="esp-sub">${cambio ? "Los dos líderes agotaron sus intentos en el cara a cara" : `${e(titulo)} · Ciclo ${info.ciclo}`}</div></div>`;
     await esperar(1300);
     for (const eq of info.equipos) {
       if (!vigente(t)) return;

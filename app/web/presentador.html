@@ -3,11 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>PRIVADO · Panel del presentador</title>
+<title>PRIVADO · 100 Dijeron · Panel del presentador</title>
+<link rel="icon" type="image/svg+xml" href="img/icono.svg">
+<meta name="description" content="100 Dijeron: juego de concurso «¿qué respondió la gente?» para reuniones en Google Meet.">
 <link rel="stylesheet" href="css/estilos.css">
 </head>
 <body class="panel">
 <header class="panel-cabecera">
+  <img class="icono-panel" src="img/icono.svg" alt="">
   <span class="privado">PRIVADO · NO COMPARTIR</span>
   <h1 id="titulo">Panel del presentador</h1>
   <span class="fase" id="fase">…</span>
@@ -57,11 +60,11 @@
     <div class="rejilla">
       <div class="tarjeta-p">
         <h2>Todas las preguntas</h2>
-        <p class="ayuda">Haz clic en una pregunta para ver sus respuestas, frecuencias y respuestas originales. Las preguntas marcadas como «poco jugable» tienen menos de 3 respuestas que dijeron 2 o más personas.</p>
+        <p class="ayuda">Haz clic en una pregunta para ver sus respuestas, frecuencias y respuestas originales. Las marcadas «pendiente de revisión» tienen menos de 4 respuestas con respaldo y no entran en la partida hasta que decidas sobre ellas.</p>
         <input class="buscador" id="buscador" placeholder="Buscar pregunta o respuesta…">
         <div class="fila-botones" style="margin:10px 0">
           <label class="check"><input type="checkbox" id="filtro-nousadas"> Solo no usadas</label>
-          <label class="check"><input type="checkbox" id="filtro-jugables"> Solo jugables</label>
+          <label class="check"><input type="checkbox" id="filtro-jugables"> Solo habilitadas</label>
         </div>
         <div id="lista-preguntas"></div>
       </div>

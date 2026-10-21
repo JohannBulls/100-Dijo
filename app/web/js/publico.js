@@ -21,13 +21,14 @@ function esc(t) {
   return String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 const nombre = (e, i) => (e.equipos[i].nombre || `Equipo ${i + 1}`);
+const NOMBRE_JUEGO = "100 Dijeron"; // el logotipo ya lo muestra; un título personalizado se añade debajo
 
 /** Equipo que se ilumina como «tiene el turno» según la fase. */
 function equipoEnTurno(e) {
   const r = e.ronda;
   if (!r) return null;
   switch (e.fase) {
-    case "cara_a_cara": return r.cara_a_cara.primero;
+    case "cara_a_cara": return r.cara_a_cara.turno;
     case "decision": return r.cara_a_cara.ganador;
     case "juego": return r.control;
     case "robo": return r.robo.equipo;
@@ -43,7 +44,15 @@ function textoFase(e) {
   if (!r) return "";
   const n = (i) => nombre(e, i);
   switch (e.fase) {
-    case "cara_a_cara": return r.cara_a_cara.primero === null ? "Cara a cara · ¡levanten la mano en Meet!" : `Cara a cara · responde primero ${n(r.cara_a_cara.primero)}`;
+    case "cara_a_cara": {
+      const c = r.cara_a_cara;
+      if (c.bloqueado) return "Cara a cara · ¡ninguno acertó! Cambio de líderes";
+      if (c.turno === null) return "Cara a cara · ¡líderes, levanten la mano en Meet!";
+      const lider = e.equipos[c.turno].lider ? `${e.equipos[c.turno].lider} (${n(c.turno)})` : n(c.turno);
+      return c.referencia && c.referencia.equipo !== c.turno
+        ? `Cara a cara · responde ${lider} · debe superar ${c.referencia.puntos} pts`
+        : `Cara a cara · responde ${lider}`;
+    }
     case "decision": return `${n(r.cara_a_cara.ganador)} ganó el cara a cara: ¿juega o pasa?`;
     case "juego": return `Juega ${n(r.control)}`;
     case "robo": return `Oportunidad de robo para ${n(r.robo.equipo)}`;
@@ -108,6 +117,10 @@ function pintar(e) {
     $("lider" + i).innerHTML = lider ? `Líder en juego<b>${esc(lider)}</b>` : sinNuevo ? `Ciclo de líderes completo<b>Elige el equipo</b>` : "";
     $("lider" + i).classList.toggle("oculto", !lider && !sinNuevo);
     $("eq" + i).classList.toggle("turno", turno === i);
+    const cac = r && e.fase === "cara_a_cara" ? r.cara_a_cara : null;
+    const err = $("err" + i);
+    err.classList.toggle("oculto", !cac || cac.omitido);
+    if (cac) err.innerHTML = `Intentos del cara a cara ${[0, 1].map((k) => `<span class="${k < cac.errores[i] ? "usado" : ""}">✗</span>`).join("")}`;
     const ganadas = e.historial.filter((h) => h.ganador === i).length;
     $("hist" + i).textContent = e.historial.length ? `Rondas ganadas: ${ganadas}` : "";
   });
@@ -135,7 +148,8 @@ function pintarPortada(e) {
     ? `<div class="miembros">${e.equipos[i].integrantes.map((n) => `<span>${esc(n)}</span>`).join("")}</div>` : "";
   if (e.fase === "preparacion") {
     p.classList.remove("oculto");
-    p.innerHTML = `<div><h1${e.equipos_sorteados ? ' class="chico"' : ""}>${esc(e.titulo)}</h1>
+    p.innerHTML = `<div><img class="logo-portada${e.equipos_sorteados ? " chico" : ""}" src="img/logo.svg" alt="100 Dijeron">
+      ${e.titulo !== NOMBRE_JUEGO ? `<h1 class="chico">${esc(e.titulo)}</h1>` : ""}
       <div class="sub">${e.equipos_sorteados ? "¡Estos son los equipos!" : "¡Encuestamos a nuestra gente! ¿Adivinarás qué respondieron?"}</div>
       <div class="vs"><div class="eq e0">${esc(nombre(e, 0))}${integrantes(0)}</div>
       <div class="contra">VS</div><div class="eq e1">${esc(nombre(e, 1))}${integrantes(1)}</div></div>
@@ -229,7 +243,11 @@ function animarEvento(ev, e) {
       sacudir();
       mostrarCapa(granX(ev.extra.strikes, ev.texto), ev.extra.strikes === 2 ? 2200 : 1700);
       break;
-    case "no_esta": sonar("no_esta"); sacudir(); mostrarCapa(granX(1, ev.texto), 1500); break;
+    case "no_esta": sonar("no_esta"); sacudir();
+      mostrarCapa(granX(1, ev.extra.errores ? `${ev.texto} Error ${ev.extra.errores} de ${ev.extra.maximo}` : ev.texto), 1600); break;
+    case "empate_cara_a_cara": sonar("turno"); mostrarCapa(mensaje("¡Empate!", `Ambos valen ${ev.extra.puntos} pts: nueva respuesta de desempate`), 2400); break;
+    case "cara_a_cara_bloqueado": sonar("robo_fallido");
+      mostrarCapa(mensaje("¡Ninguno acertó!", "Los dos líderes agotaron sus intentos: cambiamos de líderes", "malo"), 2800); break;
     case "robo_oportunidad": sonar("robo"); sacudir();
       mostrarCapa(`<div style="text-align:center"><div class="gran-x"><span>X</span><span>X</span><span>X</span></div>${mensaje(ev.texto, nom + " puede robar")}</div>`, 3000); break;
     case "robo_exitoso": sonar("robo_exitoso"); mostrarCapa(mensaje("¡Robo exitoso!", `${nom} se lleva ${ev.extra.banco} puntos`, "bueno"), 3200); break;
@@ -249,7 +267,14 @@ function animarEvento(ev, e) {
     case "ronda_cancelada": Espectaculo.cancelar(); mostrarCapa(mensaje("Ronda cancelada", "No se asignaron puntos"), 1800); break;
     case "partida_confirmada": Sonidos.musica();
       mostrarCapa(mensaje("¡Comienza el juego!", `${ev.extra.principales} rondas principales${ev.extra.extra ? ` + ${ev.extra.extra} extra` : ""}`, "bueno"), 2600); break;
-    case "cara_a_cara_ganado": sonar("cara_a_cara"); mostrarCapa(mensaje(ev.texto, "¿Juega o pasa?"), 2000); break;
+    case "cara_a_cara_ganado": {
+      sonar("cara_a_cara");
+      const panel = $("eq" + ev.equipo);
+      if (panel && e.animaciones) { panel.classList.remove("gana-cac"); void panel.offsetWidth; panel.classList.add("gana-cac"); }
+      const sub = [ev.extra.detalle, ev.extra.decide ? "¿Juega o pasa?" : "¡Juega la ronda!"].filter(Boolean).join(" · ");
+      mostrarCapa(mensaje(ev.texto, sub, "bueno"), 2600);
+      break;
+    }
     case "turno": sonar("turno"); mostrarCapa(mensaje(ev.texto), 1500); break;
     case "fin_juego": sonar("fanfarria_final"); confeti(); break;
     case "musica": case "partida_lista": Sonidos.musica(); break;

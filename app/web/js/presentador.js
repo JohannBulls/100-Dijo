@@ -108,7 +108,7 @@ function selectorAlternativo() {
 function equipoEnTurno() {
   const r = estado.ronda;
   if (!r) return null;
-  return { cara_a_cara: r.cara_a_cara.primero, decision: r.cara_a_cara.ganador, juego: r.control,
+  return { cara_a_cara: r.cara_a_cara.turno, decision: r.cara_a_cara.ganador, juego: r.control,
     robo: r.robo.equipo, resuelta: r.ganador, asignada: r.asignada_a }[estado.fase] ?? null;
 }
 
@@ -155,27 +155,52 @@ function pintarControl() {
     }
     case "cara_a_cara": {
       const cac = r.cara_a_cara;
-      const sug = e.sugerencia_cara_a_cara;
-      const intentos = cac.intentos.map((it) => `<li>${nom(it.equipo)}: ${it.respuesta_id ? `encontró una respuesta (${it.puntos} pts)` : "no estaba en el tablero"}</li>`).join("");
-      const lider = (i) => e.equipos_vista[i].lider ? ` (${esc(e.equipos_vista[i].lider)})` : "";
+      const max = e.errores_max_cara_a_cara;
+      const lider = (i) => e.equipos_vista[i].lider ? esc(e.equipos_vista[i].lider) : "su líder";
+      // Empezado = los líderes actuales ya respondieron (tras un cambio de líderes vuelve a empezar de cero)
+      const empezado = cac.intentos.some((x) => x.ronda_lideres === cac.cambios_lider);
+      const omitible = !empezado && !cac.bloqueado && Object.keys(r.reveladas).length === 0;
+      const estadoLider = (i) => `<div class="eq e${i} ${cac.turno === i ? "turno" : ""}">${nom(i)}<b style="font-size:20px">${lider(i)}</b>
+        <small>Intentos: ${[0, 1].map((k) => `<span class="${k < cac.errores[i] ? "x-usada" : "x-libre"}">✗</span>`).join("")} (${cac.errores[i]} de ${max} errores)</small>
+        ${cac.turno === i ? '<small class="le-toca">▶ LE TOCA RESPONDER</small>' : ""}</div>`;
+      let paso2 = "";
+      if (cac.bloqueado) {
+        paso2 = `<div class="paso"><b class="titulo-paso">Ninguno acertó: los dos líderes agotaron sus ${max} intentos</b>
+          <p class="ayuda">Cambia a ambos líderes (ruleta en la pantalla pública) y repite el cara a cara. Las casillas ya reveladas se quedan; los strikes de la ronda no cambian.</p>
+          <div class="fila-botones">${boton("🎡 Cambiar a ambos líderes y repetir", { tipo: "cambiar_lideres_cara_a_cara" }, "morado grande")}</div></div>`;
+      } else if (cac.turno !== null) {
+        const ref = cac.referencia;
+        paso2 = `<div class="paso"><b class="titulo-paso">Paso 2. Responde ${lider(cac.turno)} (${nom(cac.turno)})</b>
+          ${ref ? `<p class="ayuda" style="color:#fde68a"><b>${nom(ref.equipo)}</b> dio una respuesta de <b>${ref.puntos} pts</b>: para ganar, ${lider(cac.turno)} debe dar una respuesta que valga <b>más de ${ref.puntos} pts</b>. Si vale menos o no está, gana ${nom(ref.equipo)}.</p>`
+            : `<p class="ayuda">Si coincide con una casilla, pulsa <b>«Lo dijo ${nom(cac.turno)}»</b> en esa respuesta (abajo). La respuesta n.º 1 gana de inmediato. Si no está en el tablero:</p>`}
+          <div class="fila-botones">${boton(`✗ No está (error ${cac.errores[cac.turno] + 1} de ${max})`, { tipo: "respuesta_cara_a_cara", equipo: cac.turno, respuesta_id: null }, "rojo")}</div></div>`;
+      }
       html = `<h2>Cara a cara · ${r.tipo === "extra" ? `Ronda extra ${r.extra_n} ×${r.multiplicador}` : `Ronda ${r.numero}`}</h2>
-        <div class="paso ${cac.primero !== null ? "hecho" : ""}"><b class="titulo-paso">Paso 1. Lee la pregunta. ¿Quién levantó la mano primero en Google Meet?</b>
-          <div class="fila-botones">${[0, 1].map((i) => boton((cac.primero === i ? "✔ " : "") + nom(i) + lider(i), { tipo: "primero_en_responder", equipo: i }, colorEq(i))).join("")}</div></div>
-        <div class="paso"><b class="titulo-paso">Paso 2. Escucha la respuesta del líder</b>
-          <p class="ayuda">Si coincide con una respuesta del tablero, pulsa «Lo dijo …» en la lista de abajo. Si no está en el tablero:</p>
-          <div class="fila-botones">${[0, 1].map((i) => boton(`✗ ${nom(i)}: no está`, { tipo: "respuesta_cara_a_cara", equipo: i, respuesta_id: null }, "rojo")).join("")}</div>
-          ${intentos ? `<ul class="ayuda">${intentos}</ul>` : ""}
-          <p class="ayuda">Regla: si el primero dice la respuesta n.º 1, gana de inmediato. Si no, responde el otro líder y gana quien tenga la respuesta de mayor puntaje (en empate, quien respondió primero).</p></div>
-        <div class="paso"><b class="titulo-paso">Paso 3. ¿Quién gana el cara a cara?</b>
-          ${sug !== null ? `<p class="ayuda">Sugerencia según los puntos: <b>${nom(sug)}</b>. Tú decides.</p>` : ""}
-          <div class="fila-botones">${[0, 1].map((i) => boton(`🏆 Gana ${nom(i)}`, { tipo: "ganador_cara_a_cara", equipo: i }, colorEq(i) + " grande")).join("")}</div></div>`;
+        <div class="paso ${cac.turno !== null || empezado ? "hecho" : ""}"><b class="titulo-paso">Paso 1. Lee la pregunta. ¿Qué líder levantó la mano primero en Google Meet?</b>
+          <div class="fila-botones">${[0, 1].map((i) => boton((cac.primero === i ? "✔ " : "") + `${nom(i)} (${lider(i)})`, { tipo: "primero_en_responder", equipo: i }, colorEq(i), "", cac.bloqueado || (empezado && cac.primero !== null && cac.turno !== null && cac.intentos.some((x) => x.ronda_lideres === cac.cambios_lider)))).join("")}</div></div>
+        <div class="marcador-p" style="margin-bottom:12px">${estadoLider(0)}${estadoLider(1)}</div>
+        ${paso2}
+        <details class="reglas-cac"><summary class="ayuda">Reglas del cara a cara</summary><ul class="ayuda">
+          <li>La respuesta <b>n.º 1</b> del tablero gana de inmediato.</li>
+          <li>Una respuesta válida queda como referencia: el otro líder debe <b>superarla en puntos</b>. Menos puntos o «no está» → gana la referencia.</li>
+          <li>Empate en puntos: ${e.config.empate_cara_a_cara === "desempate" ? "nueva respuesta de desempate (empieza quien levantó la mano primero)" : "gana quien respondió primero"} (se cambia en Reglas y opciones).</li>
+          <li>Cada líder tiene <b>${max} intentos</b>. Si ambos los agotan, se cambia a los dos líderes. Estos errores <b>no</b> son strikes de la ronda.</li></ul></details>
+        ${omitible ? `<div class="paso"><b class="titulo-paso">¿Prefieres empezar sin cara a cara?</b>
+          <p class="ayuda">No se revela ninguna respuesta ni se registran errores. Elige qué equipo empieza la ronda:</p>
+          <div class="fila-botones">${[0, 1].map((i) => boton(`⏭ Omitir cara a cara: empieza ${nom(i)}`, { tipo: "omitir_cara_a_cara", equipo: i }, "fantasma", `¿Omitir el cara a cara? Empieza la ronda ${estado.config.equipos[i].nombre}.`)).join("")}</div></div>` : ""}
+        <details style="margin-top:6px"><summary class="ayuda">Elegir el ganador manualmente (disputas)</summary>
+          <div class="fila-botones" style="margin-top:8px">${[0, 1].map((i) => boton(`🏆 Gana ${nom(i)}`, { tipo: "ganador_cara_a_cara", equipo: i }, colorEq(i) + " chico", `¿Dar el cara a cara a ${estado.config.equipos[i].nombre} por decisión del presentador?`)).join("")}</div></details>`;
       break;
     }
     case "decision": {
       const g = r.cara_a_cara.ganador;
-      html = `<h2>${nom(g)} ganó el cara a cara</h2><p class="ayuda">Pregunta al equipo: ¿juegan la ronda o se la pasan al rival?</p>
+      const motivos = { numero_uno: "dio la respuesta n.º 1", supera: "superó la respuesta rival", no_supera: "el rival no superó su respuesta",
+        rival_sin_intentos: "el rival ya no tenía intentos", empate_primero: "empate: respondió primero", manual: "decisión del presentador", correccion: "corrección del presentador" };
+      html = `<h2>${nom(g)} ganó el cara a cara</h2><p class="ayuda">Motivo: ${motivos[r.cara_a_cara.motivo] || "—"}. Pregunta al equipo: ¿juegan la ronda o se la pasan al rival?</p>
         <div class="fila-botones">${boton(`▶ ${nom(g)} juega`, { tipo: "decidir", jugar: true }, colorEq(g) + " grande")}
-        ${boton(`↪ Pasar a ${nom(1 - g)}`, { tipo: "decidir", jugar: false }, colorEq(1 - g) + " grande")}</div>`;
+        ${boton(`↪ Pasar a ${nom(1 - g)}`, { tipo: "decidir", jugar: false }, colorEq(1 - g) + " grande")}</div>
+        <details style="margin-top:12px"><summary class="ayuda">¿Error? Corregir el ganador del cara a cara</summary>
+          <div class="fila-botones" style="margin-top:8px">${boton(`El cara a cara lo ganó ${nom(1 - g)}`, { tipo: "corregir_ganador_cara_a_cara" }, "fantasma chico", `¿Corregir? El cara a cara pasa a ${estado.config.equipos[1 - g].nombre}.`)}</div></details>`;
       break;
     }
     case "juego": {
@@ -248,6 +273,13 @@ function detalleOriginales(a) {
 }
 
 /** Insignias de contenido: «en revisión» o «reformulada». */
+/** Ejemplos reales aceptados y criterio para decidir si una respuesta verbal coincide con la casilla. */
+function guiaAceptacion(a) {
+  if (!a.ejemplos || !a.ejemplos.length) return "";
+  return `<div class="acepta"><b>Se acepta:</b> ${a.ejemplos.map((x) => `«${esc(x)}»`).join(" · ")}
+    <div class="criterio">${esc(a.criterio || "")}</div></div>`;
+}
+
 function marcasContenido(a) {
   return (a.revision_contenido ? ` <span class="insignia rojo" title="${esc(a.revision_contenido)}">⚠ en revisión · no va al tablero</span>` : "")
     + (a.reformulacion ? ` <span class="insignia oro" title="Original: ${esc(a.reformulacion.etiqueta_original)}">reformulada</span>` : "");
@@ -272,7 +304,9 @@ function pintarRespuestas() {
       const quien = rev.como === "final" ? "mostrada al final, sin puntos" : `${rev.como === "cara_a_cara" ? "cara a cara" : rev.como === "robo" ? "robo" : "en juego"}${rev.equipo !== null ? " · " + nom(rev.equipo) : ""} · +${rev.sumado}`;
       acciones = `<span class="insignia ${rev.como === "final" ? "" : "verde"}">✔ ${quien}</span>`;
     } else if (e.fase === "cara_a_cara") {
-      acciones = [0, 1].map((t) => boton(`Lo dijo ${nom(t)}`, { tipo: "respuesta_cara_a_cara", equipo: t, respuesta_id: id }, colorEq(t) + " chico")).join("");
+      const t = r.cara_a_cara.turno;
+      acciones = t === null ? `<span class="insignia">${r.cara_a_cara.bloqueado ? "cambia a los líderes" : "marca quién levantó la mano"}</span>`
+        : boton(`Lo dijo ${nom(t)}`, { tipo: "respuesta_cara_a_cara", equipo: t, respuesta_id: id }, colorEq(t) + " chico");
     } else if (e.fase === "juego") {
       acciones = boton("✓ Correcta", { tipo: "revelar", respuesta_id: id }, "verde");
     } else if (e.fase === "robo") {
@@ -282,7 +316,7 @@ function pintarRespuestas() {
     }
     return `<li class="resp ${rev ? (rev.como === "final" ? "final" : "revelada") : ""}"><span class="pos">${i + 1}</span>
       <div><div class="etq">${esc(a.etiqueta)}${marcasContenido(a)}</div><div class="datos">${datosPuntos(a, p)}${r.multiplicador > 1 ? ` (×${r.multiplicador} = ${pts[id] * r.multiplicador} al banco)` : ""}</div></div>
-      <div class="acciones">${acciones}</div>${detalleOriginales(a)}</li>`;
+      <div class="acciones">${acciones}</div>${guiaAceptacion(a)}${detalleOriginales(a)}</li>`;
   }).join("");
   const fuera = p.respuestas.filter((a) => !r.tablero.includes(a.id));
   const anterior = ["lista", "lideres"].includes(e.fase) ? " <span class=\"insignia\">ronda anterior</span>" : "";
@@ -462,17 +496,14 @@ function pintarPreparacion(forzar) {
     const plan = e.plan_rondas;
     const usadas = new Set(e.preguntas_usadas);
     $("prep-preguntas").innerHTML = `<h2>🔀 3. Orden de las preguntas ${p.orden_preguntas.length ? `<span class="insignia verde">mezcladas</span>` : ""}</h2>
-      <p class="ayuda">Hay <b>${e.preguntas_disponibles}</b> preguntas disponibles${p.incluir_poco_jugables ? " (incluidas las poco jugables)" : " (se excluyen las 4 poco jugables)"}. La aplicación las ordena al azar; cada pregunta se usa una sola vez en la partida. Este orden es privado: la pantalla pública solo muestra una animación de cartas boca abajo.</p>
-      ${editable ? `<label class="check"><input type="checkbox" id="p-pocojugables" ${p.incluir_poco_jugables ? "checked" : ""}> Incluir también las preguntas poco jugables</label>
-      <div class="fila-botones">${boton(p.orden_preguntas.length ? "🔀 Volver a mezclar preguntas" : "🔀 Mezclar preguntas", { tipo: "mezclar_preguntas" }, "morado grande")}</div>` : ""}
+      <p class="ayuda">Hay <b>${e.preguntas_disponibles}</b> preguntas habilitadas (con 4 a 10 respuestas). Las ${datos.preguntas.length - e.preguntas_disponibles} pendientes de tu revisión no entran (ver <i>docs/REVISION_DE_PREGUNTAS.md</i>). La aplicación las ordena al azar; cada pregunta se usa una sola vez en la partida. Este orden es privado: la pantalla pública solo muestra una animación de cartas boca abajo.</p>
+      ${editable ? `<div class="fila-botones">${boton(p.orden_preguntas.length ? "🔀 Volver a mezclar preguntas" : "🔀 Mezclar preguntas", { tipo: "mezclar_preguntas" }, "morado grande")}</div>` : ""}
       ${p.orden_preguntas.length ? `<ol class="orden-preg${animar ? " barajada" : ""}">${p.orden_preguntas.map((id, i) => {
         const q = pregunta(id), info = plan[i];
         return `<li class="${info ? (info.tipo === "extra" ? "extra" : "") : "reserva"} ${usadas.has(id) ? "usada" : ""}" style="${animar ? `animation-delay:${Math.min(i, 25) * 0.03}s` : ""}">
           <span class="etq-ronda">${info ? (info.tipo === "extra" ? `Extra ${info.extra_n} ×${info.multiplicador}` : `Ronda ${info.numero}`) : "Reserva"}</span>
           <span>P${q.numero}. ${esc(q.texto)}</span></li>`;
       }).join("")}</ol>` : ""}`;
-    const chk = $("p-pocojugables");
-    if (chk) chk.onchange = () => enviar({ tipo: "configurar_partida", incluir_poco_jugables: chk.checked });
   }
 
   // 4. Rondas
@@ -523,7 +554,7 @@ function pintarPreguntas() {
   const usadas = new Set(estado.preguntas_usadas);
   const lista = datos.preguntas.filter((p) => {
     if ($("filtro-nousadas").checked && usadas.has(p.id)) return false;
-    if ($("filtro-jugables").checked && !p.jugable) return false;
+    if ($("filtro-jugables").checked && !p.habilitada) return false;
     if (!q) return true;
     return (p.texto + " " + p.respuestas.map((a) => a.etiqueta).join(" ")).toLowerCase().includes(q);
   });
@@ -531,7 +562,8 @@ function pintarPreguntas() {
     const n = estado.tableros[p.id].ids.length;
     return `<div class="preg-item ${p.id === detalleId ? "sel" : ""} ${usadas.has(p.id) ? "usada" : ""}" data-preg="${p.id}">
       <span class="n">${p.numero}</span><span>${esc(p.texto)}</span>
-      <span>${usadas.has(p.id) ? `<span class="insignia">usada</span>` : ""} ${!p.jugable ? `<span class="insignia rojo">poco jugable</span>` : `<span class="insignia verde">${n} en tablero · 100 pts</span>`}
+      <span>${usadas.has(p.id) ? `<span class="insignia">usada</span>` : ""} ${!p.habilitada ? `<span class="insignia rojo">pendiente de revisión</span>` : `<span class="insignia verde">${n} en tablero · 100 pts</span>`}
+      ${p.jugabilidad.estado === "mejorada" ? `<span class="insignia oro">mejorada</span>` : ""}${p.jugabilidad.advertencias.length ? `<span class="insignia oro">⚠ dominante</span>` : ""}
       ${p.revision.length ? `<span class="insignia oro">${p.revision.length} a revisar</span>` : ""}</span></div>`;
   }).join("") || `<p class="ayuda">Sin resultados.</p>`;
   pintarDetalle();
@@ -546,10 +578,15 @@ function pintarDetalle() {
   const puedeElegir = estado.fase === "lideres" && !estado.preguntas_usadas.includes(p.id) && enTablero.size > 0;
   c.innerHTML = `<h2>Pregunta ${p.numero}</h2><p style="font-size:18px;color:#fff;margin-top:0"><b>${esc(p.texto)}</b></p>
     <p class="ayuda">${p.respuestas_validas} respuestas válidas · ${p.respuestas_excluidas} excluidas · ${p.respuestas.length} respuestas distintas · ${enTablero.size} en el tablero, que suman <b>${p.puntos_tablero} puntos</b>.</p>
+    <div class="paso ${p.habilitada ? "hecho" : ""}"><b class="titulo-paso">Jugabilidad: ${esc(p.jugabilidad.estado_nombre)}</b>
+      ${p.jugabilidad.detalle ? `<p class="ayuda">${esc(p.jugabilidad.detalle)}</p>` : ""}
+      ${p.jugabilidad.advertencias.map((x) => `<p class="ayuda" style="color:#fde68a">⚠ ${esc(x)}</p>`).join("")}
+      ${p.jugabilidad.propuesta ? `<p class="ayuda"><b>Propuesta:</b> ${esc(p.jugabilidad.propuesta)}</p>` : ""}
+      ${p.texto !== p.texto_original ? `<p class="ayuda">Redacción corregida. Texto original del Excel: «${esc(p.texto_original)}»</p>` : ""}</div>
     ${puedeElegir ? `<button class="btn verde" id="usar-pregunta">Usar en la próxima ronda (en lugar de la sorteada)</button>` : ""}
     <h3>Respuestas consolidadas</h3>
     <ul class="lista-resp">${p.respuestas.map((a, i) => `<li class="resp ${enTablero.has(a.id) ? "" : "fuera"}"><span class="pos">${enTablero.has(a.id) ? i + 1 : "–"}</span>
-      <div><div class="etq">${esc(a.etiqueta)}${marcasContenido(a)}</div><div class="datos">${datosPuntos(a, p)}</div></div><div></div>${detalleOriginales(a)}</li>`).join("")}</ul>
+      <div><div class="etq">${esc(a.etiqueta)}${marcasContenido(a)}</div><div class="datos">${datosPuntos(a, p)}</div></div><div></div>${guiaAceptacion(a)}${detalleOriginales(a)}</li>`).join("")}</ul>
     ${p.excluidas.length ? `<h3>Respuestas excluidas</h3><ul class="ayuda">${p.excluidas.map((x) => `<li>«${esc(x.texto)}» (fila ${x.fila}): ${esc(x.motivo)}</li>`).join("")}</ul>` : ""}
     ${p.revision.length ? `<h3>Notas para revisión manual</h3><ul class="ayuda">${p.revision.map((x) => `<li><b>${esc(x.tipo)}</b>: ${esc(x.detalle)}</li>`).join("")}</ul>` : ""}`;
   const usar = $("usar-pregunta");
@@ -575,10 +612,14 @@ function pintarReglas(forzar) {
     <p class="ayuda"><b>Puntos:</b> cada pregunta reparte exactamente <b>100 puntos</b> entre las respuestas de su tablero, según su frecuencia real (vienen del Excel consolidado, <i>datos/preguntas_procesadas.xlsx</i>). Las rondas adicionales multiplican el banco (×2 = hasta 200 pts). El número de rondas y los multiplicadores se configuran en la pestaña <b>Preparación</b>.</p>
     <label class="check"><input type="checkbox" id="r-pasar" ${c.permitir_pasar ? "checked" : ""} ${dis}> El ganador del cara a cara puede elegir jugar o pasar el turno</label>
     <label class="check"><input type="checkbox" id="r-robo" ${c.robo_suma_respuesta ? "checked" : ""} ${dis}> En un robo exitoso, los puntos de la respuesta robada se suman al banco (como en televisión)</label>
+    <div class="campo" style="margin-top:10px"><label for="r-empate">Empate en el cara a cara (ambas respuestas valen lo mismo)</label>
+      <select id="r-empate" ${dis}><option value="desempate" ${c.empate_cara_a_cara === "desempate" ? "selected" : ""}>Nueva respuesta de desempate (recomendado)</option>
+      <option value="primero" ${c.empate_cara_a_cara === "primero" ? "selected" : ""}>Gana quien respondió primero</option></select></div>
     <button class="btn verde" id="guardar-reglas">💾 Guardar reglas</button>`;
   $("guardar-reglas").onclick = () => {
     const cambios = { titulo: $("r-titulo").value.trim() || c.titulo };
-    if (editable) Object.assign(cambios, { permitir_pasar: $("r-pasar").checked, robo_suma_respuesta: $("r-robo").checked });
+    if (editable) Object.assign(cambios, { permitir_pasar: $("r-pasar").checked, robo_suma_respuesta: $("r-robo").checked,
+      empate_cara_a_cara: $("r-empate").value });
     $("reglas").dataset.editando = "0";
     enviar({ tipo: "configurar", cambios });
   };

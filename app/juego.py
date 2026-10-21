@@ -26,13 +26,14 @@ FASES = {
 }
 
 CONFIG_POR_DEFECTO = {
-    "titulo": "41 Clouders Dijeron",
+    "titulo": "100 Dijeron",
     "equipos": [
         {"nombre": "Equipo Azul", "integrantes": []},
         {"nombre": "Equipo Naranja", "integrantes": []},
     ],
     "permitir_pasar": True,            # el ganador del cara a cara puede ceder el turno
     "robo_suma_respuesta": True,       # el robo exitoso suma la respuesta robada al banco
+    "empate_cara_a_cara": "desempate", # «desempate»: vuelven a responder · «primero»: gana quien respondió antes
     "sonido": True,                    # interruptor general de audio
     "musica": True,                    # música de entrada
     "efectos": True,                   # efectos (correcta, strike, aplausos…)
@@ -74,7 +75,6 @@ def preparacion_inicial():
         "rondas_principales": None,     # None = automático (tamaño del equipo más numeroso)
         "rondas_extra": 0,
         "multiplicadores_extra": [],
-        "incluir_poco_jugables": False,
         "confirmada": False,
     }
 
@@ -196,9 +196,8 @@ class Juego:
         return self.rondas_principales() + self.prep["rondas_extra"]
 
     def preguntas_disponibles(self):
-        """Preguntas que pueden salir en la mezcla (habilitadas y, salvo que se pida, jugables)."""
-        incluir = self.prep["incluir_poco_jugables"]
-        return [pid for pid, p in self.preguntas.items() if p.get("habilitada", True) and (p.get("jugable", True) or incluir)]
+        """Preguntas que pueden salir en la mezcla: solo las habilitadas (4 a 10 respuestas en el tablero)."""
+        return [pid for pid, p in self.preguntas.items() if p.get("habilitada", True)]
 
     def multiplicador(self, numero_ronda):
         """Multiplicador del banco para la ronda indicada (1 en las principales)."""
@@ -238,9 +237,9 @@ class Juego:
         disponibles = len(self.preguntas_disponibles())
         total = self.total_rondas()
         if total > disponibles:
-            extra = "" if self.prep["incluir_poco_jugables"] else " Puedes incluir las preguntas poco jugables o reducir las rondas."
             errores.append(f"Faltan {total - disponibles} preguntas: configuraste {total} rondas y solo hay "
-                           f"{disponibles} preguntas disponibles.{extra}")
+                           f"{disponibles} preguntas habilitadas. Reduce las rondas o aprueba preguntas pendientes "
+                           "(ver docs/REVISION_DE_PREGUNTAS.md).")
         return errores
 
     def siguiente_pregunta(self):
@@ -368,6 +367,8 @@ class Juego:
                                    "integrantes": self.cfg["equipos"][i]["integrantes"]} for i, e in enumerate(eq)]
         if "volumen" in cambios:
             cambios["volumen"] = max(0, min(100, int(cambios["volumen"])))
+        if "empate_cara_a_cara" in cambios and cambios["empate_cara_a_cara"] not in ("desempate", "primero"):
+            raise ErrorJuego("Criterio de empate no válido (usa «desempate» o «primero»).")
         for k in ("permitir_pasar", "robo_suma_respuesta", "sonido", "musica", "efectos", "animaciones"):
             if k in cambios:
                 cambios[k] = bool(cambios[k])
@@ -496,7 +497,7 @@ class Juego:
         return f"Preguntas mezcladas al azar ({len(orden)} disponibles)"
 
     def _a_configurar_partida(self, accion):
-        """Configura rondas principales, adicionales, multiplicadores y preguntas poco jugables."""
+        """Configura rondas principales, adicionales y sus multiplicadores."""
         self._exigir_preparacion()
         p = self.prep
         if "rondas_principales" in accion:
@@ -520,13 +521,8 @@ class Juego:
         if any(not 1 <= m <= 10 for m in mult):
             raise ErrorJuego("Los multiplicadores deben ser números enteros entre 1 y 10.")
         p["multiplicadores_extra"] = mult
-        msg = ""
-        if "incluir_poco_jugables" in accion and bool(accion["incluir_poco_jugables"]) != p["incluir_poco_jugables"]:
-            p["incluir_poco_jugables"] = bool(accion["incluir_poco_jugables"])
-            p["orden_preguntas"] = []
-            msg = " · vuelve a mezclar las preguntas"
         return (f"Rondas: {self.rondas_principales()} principales + {p['rondas_extra']} adicionales"
-                + (f" (×{', ×'.join(map(str, mult))})" if mult else "") + msg)
+                + (f" (×{', ×'.join(map(str, mult))})" if mult else ""))
 
     def _a_confirmar_partida(self, accion):
         """Valida la preparación y fija equipos, orden de preguntas y número de rondas."""
@@ -648,7 +644,7 @@ class Juego:
             "tablero": tablero,
             "reveladas": {},
             "banco": 0,
-            "cara_a_cara": {"primero": None, "intentos": [], "ganador": None},
+            "cara_a_cara": self.cara_a_cara_inicial(),
             "control": None,
             "strikes": 0,
             "robo": {"equipo": None, "resultado": None, "respuesta_id": None},
@@ -678,68 +674,197 @@ class Juego:
         self._evento("ronda_cancelada", "Ronda cancelada")
         return f"Ronda {r['numero']} cancelada (no se asignaron puntos; la pregunta vuelve a estar disponible)"
 
+    # ------------------------------------------------------------------ cara a cara
+    # Reglas (ver docs/REGLAS_CARA_A_CARA.md):
+    #  1. Responde primero el líder que levantó la mano primero en Google Meet (lo marca el presentador).
+    #  2. Si da la respuesta n.º 1 del tablero, su equipo gana de inmediato.
+    #  3. Una respuesta válida queda como «referencia»: el otro líder debe SUPERARLA en puntos.
+    #     Más puntos → gana el segundo; menos puntos o «no está» → gana el de la referencia.
+    #     Mismos puntos → desempate configurable («desempate»: vuelven a responder; «primero»: gana quien respondió antes).
+    #  4. Sin referencia, una respuesta que no está suma un error al líder y pasa el turno al otro.
+    #     Cada líder tiene como máximo 2 errores. Si ambos llegan a 2, hay que cambiar a los dos líderes.
+    #  5. Los errores del cara a cara son independientes de los 3 strikes de la ronda.
+    ERRORES_MAX_CARA_A_CARA = 2
+
+    @staticmethod
+    def cara_a_cara_inicial():
+        """Estado vacío del cara a cara de una ronda."""
+        return {"primero": None, "turno": None, "intentos": [], "referencia": None, "errores": [0, 0],
+                "ganador": None, "motivo": None, "omitido": False, "bloqueado": False, "cambios_lider": 0}
+
+    def _cac(self):
+        """Estado del cara a cara de la ronda en curso."""
+        return self.estado["ronda"]["cara_a_cara"]
+
+    def _siguiente_turno(self, despues_de):
+        """Pasa el turno al otro líder; si ya agotó sus errores, sigue el mismo; si ambos los agotaron, se bloquea."""
+        cac = self._cac()
+        rival = otro(despues_de)
+        if cac["errores"][rival] < self.ERRORES_MAX_CARA_A_CARA:
+            cac["turno"] = rival
+        elif cac["errores"][despues_de] < self.ERRORES_MAX_CARA_A_CARA:
+            cac["turno"] = despues_de
+        else:
+            cac["turno"] = None
+            cac["bloqueado"] = True
+
+    def _ganar_cara_a_cara(self, eq, motivo):
+        """Cierra el cara a cara con un ganador y pasa a «jugar o pasar» (o directamente a la ronda)."""
+        r = self.estado["ronda"]
+        cac = r["cara_a_cara"]
+        cac.update(ganador=eq, motivo=motivo, turno=None, bloqueado=False)
+        textos = {"numero_uno": "¡Dio la respuesta número 1!", "supera": "¡Superó la respuesta rival!",
+                  "no_supera": "El rival no superó su respuesta", "rival_sin_intentos": "El rival ya no tiene intentos",
+                  "empate_primero": "Empate: gana quien respondió primero", "manual": "Decisión del presentador",
+                  "correccion": "Corregido por el presentador"}
+        if self.cfg["permitir_pasar"]:
+            self.estado["fase"] = "decision"
+        else:
+            r["control"] = eq
+            self.estado["fase"] = "juego"
+        self._evento("cara_a_cara_ganado", f"¡{self.nombre(eq)} gana el cara a cara!", eq,
+                     {"motivo": motivo, "detalle": textos.get(motivo, ""), "decide": self.cfg["permitir_pasar"]})
+        return textos.get(motivo, "")
+
     def _a_primero_en_responder(self, accion):
-        """Registra qué equipo levantó la mano primero en Google Meet."""
+        """Registra qué líder levantó la mano primero en Google Meet: le toca responder.
+        Se puede corregir mientras no haya respondido nadie (desde el último cambio de líderes)."""
         self._exigir_fase("cara_a_cara")
+        cac = self._cac()
         eq = self._equipo(accion["equipo"])
-        self.estado["ronda"]["cara_a_cara"]["primero"] = eq
+        if cac["intentos"] and any(i["ronda_lideres"] == cac["cambios_lider"] for i in cac["intentos"]):
+            raise ErrorJuego("Ya respondió un líder: para corregir quién levantó la mano primero usa «Deshacer».")
+        cac.update(primero=eq, turno=eq)
         self._evento("turno", f"Responde primero: {self.nombre(eq)}", eq)
         return f"Cara a cara: {self.nombre(eq)} levantó la mano primero"
 
     def _a_respuesta_cara_a_cara(self, accion):
-        """Respuesta de un líder en el cara a cara: revela una casilla o indica «no está»."""
+        """Respuesta del líder que tiene el turno: una casilla del tablero o «no está» (respuesta_id = None)."""
         self._exigir_fase("cara_a_cara")
-        eq = self._equipo(accion["equipo"])
         r = self.estado["ronda"]
-        if len(r["cara_a_cara"]["intentos"]) >= 6:
-            raise ErrorJuego("Demasiados intentos en el cara a cara; elige el ganador.")
-        rid = accion.get("respuesta_id")
-        if rid:
-            a = self._respuesta_oculta(rid)
-            _, pts, _ = self._revelar(rid, eq, "cara_a_cara", True)
-            r["cara_a_cara"]["intentos"].append({"equipo": eq, "respuesta_id": rid, "puntos": pts})
-            pos = r["tablero"].index(rid) + 1
-            self._evento("correcta", "¡Respuesta correcta!", eq, {"posicion": pos})
-            return f"Cara a cara: {self.nombre(eq)} encontró «{a['etiqueta']}» ({pts} pts)"
-        r["cara_a_cara"]["intentos"].append({"equipo": eq, "respuesta_id": None, "puntos": 0})
-        self._evento("no_esta", "¡No está en el tablero!", eq)
-        return f"Cara a cara: la respuesta de {self.nombre(eq)} no está en el tablero"
-
-    def sugerencia_cara_a_cara(self):
-        """Equipo sugerido como ganador: el de la respuesta con más puntos;
-        en empate, el que respondió primero."""
-        r = self.estado["ronda"]
-        if not r:
-            return None
         cac = r["cara_a_cara"]
-        mejores = [-1, -1]
-        orden = {}
-        for i, it in enumerate(cac["intentos"]):
-            if it["respuesta_id"]:
-                mejores[it["equipo"]] = max(mejores[it["equipo"]], it["puntos"])
-                orden.setdefault(it["equipo"], i)
-        if mejores == [-1, -1]:
-            return None
-        if mejores[0] != mejores[1]:
-            return 0 if mejores[0] > mejores[1] else 1
-        if cac["primero"] is not None:
-            return cac["primero"]
-        return min(orden, key=orden.get)
+        eq = self._equipo(accion["equipo"])
+        if cac["bloqueado"]:
+            raise ErrorJuego("Los dos líderes agotaron sus 2 intentos: cambia a ambos líderes para repetir el desempate.")
+        if cac["turno"] is None:
+            raise ErrorJuego("Primero marca qué líder levantó la mano primero en Google Meet.")
+        if eq != cac["turno"]:
+            raise ErrorJuego(f"Ahora le toca responder al líder de {self.nombre(cac['turno'])}.")
+        rid = accion.get("respuesta_id")
+        intento = {"equipo": eq, "respuesta_id": rid, "puntos": 0, "ronda_lideres": cac["cambios_lider"]}
+        cac["intentos"].append(intento)
+        if not rid:
+            cac["errores"][eq] += 1
+            self._evento("no_esta", "¡No está en el tablero!", eq,
+                         {"errores": cac["errores"][eq], "maximo": self.ERRORES_MAX_CARA_A_CARA})
+            desc = f"Cara a cara: la respuesta de {self.nombre(eq)} no está (error {cac['errores'][eq]} de {self.ERRORES_MAX_CARA_A_CARA})"
+            if cac["referencia"]:
+                return desc + " · " + self._ganar_cara_a_cara(cac["referencia"]["equipo"], "no_supera")
+            self._siguiente_turno(eq)
+            if cac["bloqueado"]:
+                self._evento("cara_a_cara_bloqueado", "¡Ninguno acertó!", None, {"errores": cac["errores"]})
+                desc += " · ambos líderes agotaron sus intentos"
+            return desc
+        a = self._respuesta_oculta(rid)
+        _, pts, _ = self._revelar(rid, eq, "cara_a_cara", True)
+        intento["puntos"] = pts
+        pos = r["tablero"].index(rid) + 1
+        self._evento("correcta", "¡Respuesta correcta!", eq, {"posicion": pos})
+        desc = f"Cara a cara: {self.nombre(eq)} encontró «{a['etiqueta']}» ({pts} pts)"
+        maximo = self.puntos_respuesta(self._buscar_respuesta(r["tablero"][0]))
+        if pts >= maximo:
+            return desc + " · " + self._ganar_cara_a_cara(eq, "numero_uno")
+        ref = cac["referencia"]
+        if ref is None:
+            cac["referencia"] = {"equipo": eq, "puntos": pts, "respuesta_id": rid}
+            rival = otro(eq)
+            if cac["errores"][rival] >= self.ERRORES_MAX_CARA_A_CARA:
+                return desc + " · " + self._ganar_cara_a_cara(eq, "rival_sin_intentos")
+            cac["turno"] = rival
+            return desc + f" · {self.nombre(rival)} debe superar {pts} pts"
+        if pts > ref["puntos"]:
+            return desc + " · " + self._ganar_cara_a_cara(eq, "supera")
+        if pts < ref["puntos"]:
+            return desc + " · " + self._ganar_cara_a_cara(ref["equipo"], "no_supera")
+        # Empate en puntos
+        quedan = any(x not in r["reveladas"] for x in r["tablero"])
+        if self.cfg["empate_cara_a_cara"] == "desempate" and quedan:
+            cac["referencia"] = None
+            primero = cac["primero"] if cac["primero"] is not None else ref["equipo"]
+            cac["turno"] = primero if cac["errores"][primero] < self.ERRORES_MAX_CARA_A_CARA else otro(primero)
+            self._evento("empate_cara_a_cara", "¡Empate! Nueva respuesta de desempate", None, {"puntos": pts})
+            return desc + f" · empate a {pts} pts: desempate, responde {self.nombre(cac['turno'])}"
+        return desc + " · " + self._ganar_cara_a_cara(ref["equipo"], "empate_primero")
 
     def _a_ganador_cara_a_cara(self, accion):
-        """Fija al ganador del cara a cara (que luego decide jugar o pasar)."""
+        """Decisión manual del presentador sobre el ganador del cara a cara (por ejemplo, en una disputa)."""
         self._exigir_fase("cara_a_cara")
         eq = self._equipo(accion["equipo"])
+        self._ganar_cara_a_cara(eq, "manual")
+        return f"{self.nombre(eq)} gana el cara a cara (decisión del presentador)"
+
+    def _a_corregir_ganador_cara_a_cara(self, accion):
+        """Corrige el ganador antes de que empiece la ronda: el cara a cara pasa al otro equipo."""
+        self._exigir_fase("decision")
         r = self.estado["ronda"]
-        r["cara_a_cara"]["ganador"] = eq
-        if self.cfg["permitir_pasar"]:
-            self.estado["fase"] = "decision"
-            self._evento("cara_a_cara_ganado", f"¡{self.nombre(eq)} gana el cara a cara!", eq)
-        else:
-            r["control"] = eq
-            self.estado["fase"] = "juego"
-            self._evento("turno", f"¡{self.nombre(eq)} juega la ronda!", eq)
-        return f"{self.nombre(eq)} gana el cara a cara"
+        nuevo = otro(r["cara_a_cara"]["ganador"])
+        self._ganar_cara_a_cara(nuevo, "correccion")
+        return f"Corrección: el cara a cara lo gana {self.nombre(nuevo)}"
+
+    def _a_omitir_cara_a_cara(self, accion):
+        """Salta el cara a cara: el presentador elige qué equipo empieza la ronda. No revela nada ni registra errores."""
+        self._exigir_fase("cara_a_cara")
+        r = self.estado["ronda"]
+        cac = r["cara_a_cara"]
+        # Se puede omitir mientras los líderes actuales no hayan respondido y no haya casillas reveladas
+        # (por ejemplo, justo después de cambiar a ambos líderes).
+        if any(i["ronda_lideres"] == cac["cambios_lider"] for i in cac["intentos"]) or r["reveladas"]:
+            raise ErrorJuego("El cara a cara ya empezó (hay respuestas registradas). Usa «Deshacer» o elige el ganador manualmente.")
+        eq = self._equipo(accion["equipo"])
+        r["cara_a_cara"].update(omitido=True, turno=None, ganador=eq, motivo="omitido")
+        r["control"] = eq
+        self.estado["fase"] = "juego"
+        self._evento("turno", f"¡{self.nombre(eq)} empieza la ronda!", eq, {"omitido": True})
+        return f"Cara a cara omitido: empieza {self.nombre(eq)}"
+
+    def _sortear_lider_equipo(self, equipo, excluir):
+        """Elige al azar un nuevo líder del equipo (distinto del actual), preferentemente entre quienes aún no lo
+        han sido en este ciclo. Devuelve (elegido, candidatos); si el equipo tiene una sola persona, la repite."""
+        lid = self.estado["lideres"]
+        miembros = self.cfg["equipos"][equipo]["integrantes"]
+        candidatos = [m for m in miembros if m not in lid["usados"][equipo] and m != excluir]
+        if not candidatos:
+            candidatos = [m for m in miembros if m != excluir] or list(miembros)
+        elegido = self.rng.choice(candidatos)
+        if elegido not in lid["usados"][equipo]:
+            lid["usados"][equipo].append(elegido)
+        return elegido, candidatos
+
+    def _a_cambiar_lideres_cara_a_cara(self, accion):
+        """Cuando ambos líderes agotaron sus 2 errores: sortea dos líderes nuevos y reinicia el cara a cara
+        (las casillas ya reveladas siguen reveladas; los strikes de la ronda no cambian)."""
+        self._exigir_fase("cara_a_cara")
+        r = self.estado["ronda"]
+        cac = r["cara_a_cara"]
+        if not cac["bloqueado"]:
+            raise ErrorJuego("Solo se cambian los líderes cuando ambos agotaron sus 2 intentos en el cara a cara.")
+        lid = self.estado["lideres"]
+        equipos = []
+        for i in (0, 1):
+            anterior = r["lideres"][i]
+            elegido, candidatos = self._sortear_lider_equipo(i, anterior)
+            r["lideres"][i] = lid["actuales"][i] = elegido
+            lid["historial"].append({"ronda": r["numero"], "ciclo": lid["ciclo"], "equipo": i, "participante": elegido,
+                                     "nombre": self.nombre_participante(elegido), "unico": len(candidatos) == 1,
+                                     "motivo": "cambio en el cara a cara"})
+            equipos.append({"equipo": i, "candidatos": [self.nombre_participante(c) for c in candidatos],
+                            "indice": candidatos.index(elegido), "elegido": self.nombre_participante(elegido),
+                            "completo": False})
+        cac.update(primero=None, turno=None, referencia=None, errores=[0, 0], bloqueado=False,
+                   cambios_lider=cac["cambios_lider"] + 1)
+        self._evento("sorteo_lideres", "", extra=dict(self.info_ronda(r["numero"]), ronda=r["numero"], ciclo=lid["ciclo"],
+                                                      nuevo_ciclo=False, equipos=equipos, motivo="cambio_cara_a_cara"))
+        return "Cambio de líderes en el cara a cara: " + " · ".join(f"{self.nombre(e['equipo'])}: {e['elegido']}" for e in equipos)
 
     def _a_decidir(self, accion):
         """El ganador del cara a cara juega la ronda o se la pasa al rival."""
@@ -858,6 +983,9 @@ class Juego:
             "numero": r["numero"], "pregunta_id": p["id"], "pregunta": p["texto"], "tipo": r["tipo"],
             "ganador": eq, "puntos": r["banco"], "multiplicador": r["multiplicador"],
             "robo": r["robo"]["resultado"],
+            "cara_a_cara": {"ganador": r["cara_a_cara"]["ganador"], "motivo": r["cara_a_cara"]["motivo"],
+                            "omitido": r["cara_a_cara"]["omitido"], "errores": r["cara_a_cara"]["errores"],
+                            "cambios_lider": r["cara_a_cara"]["cambios_lider"]},
             "lideres": [self.nombre_participante(x) if x else None for x in r["lideres"]],
         })
         self._evento("ronda_ganada", f"¡{self.nombre(eq)} gana la ronda!", eq, {"puntos": r["banco"]})
@@ -933,7 +1061,10 @@ class Juego:
                 "numero": r["numero"], "pregunta": p["texto"], "multiplicador": r["multiplicador"],
                 "tipo": r["tipo"], "extra_n": r["extra_n"], "maximo": r["maximo"],
                 "casillas": casillas, "banco": r["banco"], "strikes": r["strikes"], "control": r["control"],
-                "cara_a_cara": {"primero": r["cara_a_cara"]["primero"], "ganador": r["cara_a_cara"]["ganador"]},
+                "cara_a_cara": {k: r["cara_a_cara"][k] for k in ("primero", "turno", "errores", "ganador", "motivo",
+                                                                 "omitido", "bloqueado")}
+                | {"referencia": {"equipo": r["cara_a_cara"]["referencia"]["equipo"],
+                                  "puntos": r["cara_a_cara"]["referencia"]["puntos"]} if r["cara_a_cara"]["referencia"] else None},
                 "robo": dict(r["robo"], respuesta_id=None), "ganador": r["ganador"],
                 "asignada": r["asignada"], "asignada_a": r["asignada_a"], "puntos_asignados": r["puntos_asignados"],
             }
@@ -961,7 +1092,7 @@ class Juego:
         e["fase_nombre"] = FASES[e["fase"]]
         e["puede_deshacer"] = bool(self.pila_deshacer)
         e["ultima_deshacible"] = self.pila_deshacer[-1].get("_descripcion") if self.pila_deshacer else None
-        e["sugerencia_cara_a_cara"] = self.sugerencia_cara_a_cara() if e["fase"] == "cara_a_cara" else None
+        e["errores_max_cara_a_cara"] = self.ERRORES_MAX_CARA_A_CARA
         e["tableros"] = {pid: {"ids": [a["id"] for a in self.tablero_de(p)],
                                "puntos": {a["id"]: self.puntos_respuesta(a) for a in p["respuestas"]}}
                          for pid, p in self.preguntas.items()}
