@@ -135,7 +135,7 @@ Se dejaron **separadas** salvo que se indique lo contrario.
 ## F. Sonidos: origen y licencia
 
 - **Referencia que enviaste** (myinstants, «Correcto - 100 mexicanos dijeron»): la revisé. Es un clip subido por un usuario («kevin7279»), **sin ninguna licencia indicada**, y por su nombre proviene del programa de televisión *100 Mexicanos Dijeron*, que tiene derechos de autor. Como no puedo verificar que se pueda reutilizar, **no lo descargué ni lo incorporé**.
-- **Lo que usa el juego:** todos los efectos y la música de entrada son **originales**, sintetizados en el navegador con Web Audio (`app/web/sonidos.js`). Están inspirados en el estilo de concurso (un «¡ding-ding!» alegre para la respuesta correcta, un timbre de error, aplausos, fanfarrias), pero no copian ningún sonido existente. No hay archivos de audio, servicios externos ni costos.
+- **Lo que usa el juego:** todos los efectos y la música de entrada son **originales**, sintetizados en el navegador con Web Audio (`app/web/js/sonidos.js`). Están inspirados en el estilo de concurso (un «¡ding-ding!» alegre para la respuesta correcta, un timbre de error, aplausos, fanfarrias), pero no copian ningún sonido existente. No hay archivos de audio, servicios externos ni costos.
 - Si en el futuro quieres usar un sonido grabado, elige uno con licencia libre verificada (por ejemplo CC0) y guárdalo junto con su licencia. Puedo integrarlo.
 
 ---

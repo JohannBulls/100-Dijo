@@ -1,15 +1,28 @@
-// Pantalla pública: solo lee /api/publico (que nunca contiene respuestas ocultas).
+/**
+ * Pantalla pública del concurso (la que se comparte en Google Meet).
+ *
+ * - Solo LEE el estado público (/api/publico): no tiene botones ni recibe respuestas
+ *   ocultas, frecuencias ni el orden de las preguntas.
+ * - Se mantiene sincronizada con «espera larga»: cada consulta espera a que cambie la
+ *   versión del estado, así se actualiza al instante incluso en una pestaña de fondo.
+ * - Cada estado trae un `evento` (respuesta correcta, strike, sorteo…). Si es nuevo, se
+ *   anima y suena; al abrir o recargar la página no se repite el último evento.
+ *
+ * Depende de: sonidos.js (efectos) y espectaculos.js (sorteos, ruleta, ronda extra).
+ */
 const $ = (id) => document.getElementById(id);
 let estado = null;
 let ultimoEvento = null;
 let claveTablero = "";
 let temporizadorCapa = null;
 
+/** Escapa texto para insertarlo en HTML sin riesgo. */
 function esc(t) {
   return String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 const nombre = (e, i) => (e.equipos[i].nombre || `Equipo ${i + 1}`);
 
+/** Equipo que se ilumina como «tiene el turno» según la fase. */
 function equipoEnTurno(e) {
   const r = e.ronda;
   if (!r) return null;
@@ -24,6 +37,7 @@ function equipoEnTurno(e) {
   }
 }
 
+/** Texto corto sobre la pregunta que explica qué está pasando. */
 function textoFase(e) {
   const r = e.ronda;
   if (!r) return "";
@@ -39,6 +53,7 @@ function textoFase(e) {
   }
 }
 
+/** Dibuja las casillas del tablero; las reveladas se voltean con animación. */
 function pintarTablero(r) {
   const tablero = $("tablero");
   const clave = r ? `${r.numero}-${r.casillas.length}` : "";
@@ -70,6 +85,7 @@ function pintarTablero(r) {
   });
 }
 
+/** Actualiza toda la pantalla con un estado público nuevo. */
 function pintar(e) {
   document.body.classList.toggle("sin-animaciones", !e.animaciones);
   document.title = e.titulo;
@@ -112,6 +128,7 @@ function pintar(e) {
   $("activar-sonido").classList.toggle("oculto", !necesitaClic);
 }
 
+/** Portada a pantalla completa: preparación, próxima ronda o resultado final. */
 function pintarPortada(e) {
   const p = $("portada");
   const integrantes = (i) => e.equipos_sorteados
@@ -151,6 +168,7 @@ function pintarPortada(e) {
   }
 }
 
+/** Muestra un mensaje grande sobre la pantalla durante `ms` milisegundos. */
 function mostrarCapa(html, ms) {
   const capa = $("capa");
   clearTimeout(temporizadorCapa);
@@ -164,6 +182,7 @@ function mostrarCapa(html, ms) {
 const mensaje = (texto, sub = "", clase = "") => `<div class="mensaje ${clase}">${esc(texto)}${sub ? `<small>${esc(sub)}</small>` : ""}</div>`;
 const granX = (n, sub) => `<div style="text-align:center"><div class="gran-x">${"<span>X</span>".repeat(n)}</div>${sub ? mensaje(sub, "", "malo") : ""}</div>`;
 
+/** Lluvia de confeti (si las animaciones están activadas). */
 function confeti(cantidad = 140) {
   if (!estado || !estado.animaciones) return;
   const c = $("confeti");
@@ -183,6 +202,7 @@ function confeti(cantidad = 140) {
 window.confeti = confeti;
 const sonar = (nombreSonido) => Sonidos.efecto(nombreSonido);
 
+/** Hace temblar la pantalla un instante (strikes). */
 function sacudir() {
   if (!estado.animaciones) return;
   const el = $("escenario");
@@ -191,6 +211,7 @@ function sacudir() {
   el.classList.add("sacudir");
 }
 
+/** Anima y hace sonar un evento nuevo del juego. */
 function animarEvento(ev, e) {
   const eq = ev.equipo;
   const nom = eq === null || eq === undefined ? "" : nombre(e, eq);
@@ -237,15 +258,19 @@ function animarEvento(ev, e) {
   }
 }
 
+/** Procesa un estado recibido del servidor (configura audio, pinta y anima). */
 function recibir(e) {
   const primera = !estado;
   estado = e;
   Sonidos.configurar({ sonido: e.sonido, musica: e.musica, efectos: e.efectos, volumen: e.volumen });
-  pintar(e);
+  // Un error al dibujar o animar no debe detener la sincronización ni ocultar los demás efectos.
+  try { pintar(e); } catch (err) { console.error("Error al dibujar la pantalla:", err); }
   const ev = e.evento;
   if (ev && ev.id !== ultimoEvento) {
-    if (!primera) animarEvento(ev, e); // al abrir o recargar la página no se repite el último efecto
     ultimoEvento = ev.id;
+    if (!primera) { // al abrir o recargar la página no se repite el último efecto
+      try { animarEvento(ev, e); } catch (err) { console.error("Error al animar el evento:", err); }
+    }
   }
 }
 
@@ -254,19 +279,22 @@ function recibir(e) {
 // al instante aunque el navegador la tenga en segundo plano.
 async function actualizar() {
   for (;;) {
+    let e;
     try {
       const url = estado ? `/api/publico?esperar=${estado.version}` : "/api/publico";
-      const e = await (await fetch(url, { cache: "no-store" })).json();
-      $("sin-conexion").classList.add("oculto");
-      if (!estado || e.version !== estado.version) recibir(e);
-    } catch (err) {
+      e = await (await fetch(url, { cache: "no-store" })).json();
+    } catch (err) { // solo un fallo de red se muestra como «sin conexión»
       $("sin-conexion").classList.remove("oculto");
       await new Promise((r) => setTimeout(r, 1000));
+      continue;
     }
+    $("sin-conexion").classList.add("oculto");
+    if (!estado || e.version !== estado.version) recibir(e);
   }
 }
 
 let musicaInicialSonada = false;
+/** Habilita el audio tras un clic (los navegadores lo exigen) y toca la música de entrada una vez. */
 function activarAudio() {
   Sonidos.activar();
   setTimeout(() => {

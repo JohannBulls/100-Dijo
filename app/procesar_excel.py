@@ -78,6 +78,7 @@ def repartir_100(frecuencias, total=PUNTOS_POR_PREGUNTA):
 
 
 def normalizar(texto):
+    """Texto en minúsculas, sin tildes ni signos: sirve para comparar respuestas."""
     t = unicodedata.normalize("NFD", texto.lower())
     t = "".join(c for c in t if unicodedata.category(c) != "Mn")
     t = re.sub(r"[^\w\s]", " ", t)
@@ -112,6 +113,10 @@ def leer_excel(ruta):
 
 
 def procesar(ruta_excel, ruta_agrupaciones=ARCHIVO_AGRUPACIONES):
+    """Lee el Excel y las agrupaciones y devuelve las preguntas consolidadas con sus puntos.
+
+    No modifica ningún archivo: solo calcula. main() es quien escribe los resultados.
+    """
     hoja, preguntas_excel, total_personas = leer_excel(ruta_excel)
     with open(ruta_agrupaciones, encoding="utf-8") as f:
         agrup = json.load(f)["preguntas"]
@@ -212,12 +217,14 @@ def procesar(ruta_excel, ruta_agrupaciones=ARCHIVO_AGRUPACIONES):
 
 
 def escribir_xlsx(res, ruta):
+    """Escribe el Excel consolidado de revisión (hojas Resumen, Preguntas, Consolidadas, Contenido, Trazabilidad y Revisión manual)."""
     import openpyxl
     from openpyxl.styles import Alignment, Font, PatternFill
     wb = openpyxl.Workbook()
     negrita, relleno = Font(bold=True, color="FFFFFF"), PatternFill("solid", fgColor="1F3A93")
 
     def hoja(titulo, encabezados, filas, anchos):
+        """Crea una hoja con encabezado en color, anchos de columna y filas ajustadas."""
         ws = wb.create_sheet(titulo)
         ws.append(encabezados)
         for c in ws[1]:
@@ -254,6 +261,7 @@ def escribir_xlsx(res, ruta):
          [6, 70, 12, 10, 12, 12, 14, 14, 12])
 
     def en_tablero(r):
+        """Texto «Sí» o «No (motivo)» para la columna «¿Va al tablero?»."""
         return "Sí" if r["en_tablero"] else f"No ({r['motivo_fuera']})"
 
     ws = hoja("Consolidadas", ["N°", "Pregunta", "Posición", "Respuesta consolidada (en pantalla)", "Frecuencia real (personas)",
@@ -291,6 +299,7 @@ def escribir_xlsx(res, ruta):
 
 
 def main():
+    """Punto de entrada de PROCESAR_EXCEL.bat: procesa el Excel y escribe los archivos de datos/."""
     if len(sys.argv) > 1:
         ruta = sys.argv[1]
     else:

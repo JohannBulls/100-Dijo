@@ -2,7 +2,21 @@
 
 Sirve las páginas (pantalla pública y panel del presentador) y guarda el estado
 de la partida. Solo escucha en este computador (127.0.0.1): nadie de la red
-puede conectarse.
+puede conectarse. Usa únicamente la biblioteca estándar de Python.
+
+Rutas:
+    GET  /                 página de inicio (enlaces a las dos pantallas)
+    GET  /publico          pantalla pública (la que se comparte en Google Meet)
+    GET  /presentador      panel privado del presentador
+    GET  /css/…, /js/…     archivos estáticos de app/web
+    GET  /api/publico      estado visible para el público (sin respuestas ocultas)
+    GET  /api/presentador  estado completo para el panel
+    GET  /api/preguntas    preguntas procesadas (con frecuencias y respuestas originales)
+    POST /api/accion       {"version": n, "accion": {"tipo": …}} → aplica una acción
+
+«Espera larga»: /api/publico?esperar=N y /api/presentador?esperar=N no responden
+hasta que la versión del estado sea distinta de N (o pasen 20 s). Así las pantallas
+se actualizan al instante sin depender de temporizadores del navegador.
 
 Uso:  python app/servidor.py [--puerto 8765] [--no-abrir]
 """
@@ -35,6 +49,7 @@ class Servicio:
     """Mantiene el juego en memoria, lo protege con un candado y lo guarda en disco."""
 
     def __init__(self, archivo_preguntas=ARCHIVO_PREGUNTAS, archivo_partida=ARCHIVO_PARTIDA):
+        """Carga las preguntas procesadas y, si existe, la partida guardada."""
         with open(archivo_preguntas, encoding="utf-8") as f:
             self.datos = json.load(f)
         self.archivo_partida = archivo_partida
@@ -51,6 +66,7 @@ class Servicio:
         self.juego = Juego(self.datos["preguntas"], estado, pila)
 
     def guardar(self):
+        """Guarda la partida en disco de forma atómica (archivo temporal + reemplazo)."""
         if not self.archivo_partida:
             return
         tmp = self.archivo_partida + ".tmp"
@@ -59,6 +75,7 @@ class Servicio:
         os.replace(tmp, self.archivo_partida)
 
     def accion(self, cuerpo):
+        """Aplica una acción del panel, guarda la partida y avisa a las pantallas en espera."""
         with self.candado:
             version = cuerpo.get("version")
             self.juego.aplicar(cuerpo.get("accion") or {}, version)
@@ -74,22 +91,29 @@ class Servicio:
             self.cambio.wait_for(lambda: self.juego.estado["version"] != version, timeout=espera)
 
     def publico(self, version=None, espera=ESPERA_MAXIMA):
+        """Vista pública (sin respuestas ocultas). Con `version`, espera hasta que haya cambios."""
         with self.candado:
             self._esperar(version, espera)
             return self.juego.vista_publica()
 
     def presentador(self, version=None, espera=ESPERA_MAXIMA):
+        """Vista completa para el panel privado. Con `version`, espera hasta que haya cambios."""
         with self.candado:
             self._esperar(version, espera)
             return self.juego.vista_presentador()
 
 
 def crear_manejador(servicio):
+    """Crea la clase que atiende las peticiones HTTP usando el servicio indicado."""
     class Manejador(BaseHTTPRequestHandler):
-        def log_message(self, *args):  # silencio: la consola queda limpia para el usuario
+        """Atiende páginas, archivos estáticos y la API JSON del juego."""
+
+        def log_message(self, *args):
+            """Silencia el registro de cada petición para que la ventana del servidor quede limpia."""
             pass
 
         def _enviar(self, codigo, cuerpo, tipo="application/json; charset=utf-8"):
+            """Envía una respuesta (JSON o archivo) sin caché."""
             datos = cuerpo if isinstance(cuerpo, bytes) else json.dumps(cuerpo, ensure_ascii=False).encode("utf-8")
             try:
                 self.send_response(codigo)
@@ -102,6 +126,7 @@ def crear_manejador(servicio):
                 pass  # la pestaña se cerró mientras esperaba: no es un error del juego
 
         def do_GET(self):
+            """GET: páginas, archivos de app/web y vistas del juego (/api/publico, /api/presentador, /api/preguntas)."""
             url = urlparse(self.path)
             ruta = url.path
             if ruta in ("/api/publico", "/api/presentador"):
@@ -121,6 +146,7 @@ def crear_manejador(servicio):
                 self._enviar(200, f.read(), TIPOS.get(os.path.splitext(archivo)[1], "application/octet-stream"))
 
         def do_POST(self):
+            """POST /api/accion: aplica una acción del panel del presentador."""
             if urlparse(self.path).path != "/api/accion":
                 return self._enviar(404, {"error": "No encontrado"})
             try:
@@ -136,6 +162,7 @@ def crear_manejador(servicio):
 
 
 def main():
+    """Punto de entrada: lee los argumentos, inicia el servidor y abre el navegador."""
     parser = argparse.ArgumentParser(description="Servidor local del juego")
     parser.add_argument("--puerto", type=int, default=8765)
     parser.add_argument("--no-abrir", action="store_true", help="no abrir el navegador automáticamente")

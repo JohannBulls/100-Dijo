@@ -339,7 +339,9 @@ button { font-family: inherit; }
   filter: drop-shadow(0 .6vh .6vh rgba(0,0,0,.6)); }
 .esp-ganador { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: var(--fuente-titulo); font-size: 13vh;
   line-height: 1; padding: 3vh 5vw; border-radius: 28px; background: rgba(5,8,35,.92); border: .7vh solid var(--oro); z-index: 3;
-  animation: entrar .5s cubic-bezier(.2,.9,.3,1.4) both; max-width: 86vw; }
+  animation: entrar-centrado .5s cubic-bezier(.2,.9,.3,1.4) both; max-width: 86vw; }
+/* Igual que «entrar», pero conservando el centrado con translate (si no, el cartel queda corrido). */
+@keyframes entrar-centrado { from { transform: translate(-50%, -50%) scale(.4); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
 .esp-ganador small { display: block; font-family: var(--fuente); font-size: 3.4vh; color: var(--oro); margin-bottom: 1vh; }
 .esp-ganador.e0 { box-shadow: 0 0 10vh rgba(59,130,246,.8); } .esp-ganador.e1 { box-shadow: 0 0 10vh rgba(249,115,22,.8); }
 .esp-resumen { display: flex; gap: 4vw; justify-content: center; margin-top: 3vh; flex-wrap: wrap; }

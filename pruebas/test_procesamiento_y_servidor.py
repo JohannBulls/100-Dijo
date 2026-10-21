@@ -243,14 +243,15 @@ class PruebasServidor(unittest.TestCase):
                 return e.code, json.loads(e.read())
 
     def test_paginas_disponibles(self):
-        for ruta in ("/", "/publico", "/presentador", "/estilos.css", "/publico.js", "/presentador.js", "/sonidos.js"):
+        for ruta in ("/", "/publico", "/presentador", "/css/estilos.css", "/js/publico.js", "/js/presentador.js", "/js/sonidos.js",
+                     "/js/espectaculos.js"):
             self.assertTrue(len(self.get(ruta, False)) > 100, ruta)
         with self.assertRaises(urllib.error.HTTPError) as ctx:
             self.get("/../datos/preguntas_procesadas.json", False)
         ctx.exception.close()
 
     def test_pagina_publica_no_tiene_controles(self):
-        html = self.get("/publico", False) + self.get("/publico.js", False)
+        html = self.get("/publico", False) + self.get("/js/publico.js", False)
         self.assertNotIn("/api/accion", html)
         self.assertNotIn("/api/presentador", html)
         self.assertNotIn("/api/preguntas", html)

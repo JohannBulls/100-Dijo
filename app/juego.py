@@ -59,10 +59,12 @@ class ErrorJuego(Exception):
 
 
 def otro(equipo):
+    """Devuelve el índice del equipo rival (0 ↔ 1)."""
     return 1 - equipo
 
 
 def preparacion_inicial():
+    """Estado vacío de la pestaña Preparación (participantes, sorteos y rondas)."""
     return {
         "participantes": [],            # [{"id": "j1", "nombre": "Ana"}]
         "siguiente_id": 1,
@@ -78,11 +80,13 @@ def preparacion_inicial():
 
 
 def lideres_iniciales():
+    """Estado vacío del historial de líderes (ciclo 1, nadie ha sido líder)."""
     return {"ciclo": 1, "usados": [[], []], "historial": [], "actuales": [None, None], "sorteo": None,
             "antes_del_sorteo": None}
 
 
 def estado_inicial(config=None):
+    """Estado completo de una partida nueva. Todo es JSON serializable para poder guardarlo."""
     return {
         "version": 0,
         "config": copy.deepcopy(config or CONFIG_POR_DEFECTO),
@@ -100,7 +104,24 @@ def estado_inicial(config=None):
 
 
 class Juego:
+    """Partida en curso: estado, reglas y acciones.
+
+    Fases (ver FASES): preparacion → lista → lideres → cara_a_cara → decision → juego
+    → robo → resuelta → asignada → (lideres → … ) → fin.
+
+    Cada acción del panel se envía como {"tipo": "...", ...} a aplicar(), que la delega
+    en el método _a_<tipo>. Los métodos _a_* devuelven un texto para la bitácora (y la
+    acción se puede deshacer) o None (acciones de apariencia que no se deshacen).
+    """
+
     def __init__(self, preguntas, estado=None, deshacer=None, rng=None):
+        """Crea el juego.
+
+        preguntas: lista de preguntas procesadas (datos/preguntas_procesadas.json).
+        estado / deshacer: partida guardada a recuperar (o None para empezar de cero).
+        rng: generador aleatorio; por defecto el del sistema operativo. Las pruebas pasan
+             uno con semilla para obtener resultados reproducibles.
+        """
         self.preguntas = {p["id"]: p for p in preguntas}
         self.rng = rng or random.SystemRandom()  # azar real del sistema operativo
         self.estado = estado or estado_inicial()
@@ -121,22 +142,27 @@ class Juego:
     # ------------------------------------------------------------------ utilidades
     @property
     def cfg(self):
+        """Configuración (nombres de equipos, reglas y audio)."""
         return self.estado["config"]
 
     @property
     def prep(self):
+        """Datos de la preparación (participantes, sorteos, orden de preguntas, rondas)."""
         return self.estado["preparacion"]
 
     def nombre(self, equipo):
+        """Nombre visible del equipo 0 o 1."""
         return self.cfg["equipos"][equipo]["nombre"] or f"Equipo {equipo + 1}"
 
     def nombre_participante(self, pid):
+        """Nombre de un participante a partir de su identificador («j1», «j2»…)."""
         for p in self.prep["participantes"]:
             if p["id"] == pid:
                 return p["nombre"]
         return "?"
 
     def pregunta_actual(self):
+        """Pregunta de la ronda en curso (o None si aún no hay ronda)."""
         r = self.estado["ronda"]
         return self.preguntas[r["pregunta_id"]] if r else None
 
@@ -151,6 +177,7 @@ class Juego:
         return [a for a in pregunta["respuestas"] if a.get("en_tablero")]
 
     def tamanos_equipos(self):
+        """Integrantes de cada equipo; antes del sorteo, el reparto previsto."""
         if self.prep["sorteo_equipos"]:
             return [len(e["integrantes"]) for e in self.cfg["equipos"]]
         n = len(self.prep["participantes"])
@@ -161,16 +188,20 @@ class Juego:
         return max(1, max(self.tamanos_equipos()))
 
     def rondas_principales(self):
+        """Rondas principales configuradas (automático = equipo más numeroso)."""
         return self.prep["rondas_principales"] or self.minimo_principales()
 
     def total_rondas(self):
+        """Rondas principales + adicionales."""
         return self.rondas_principales() + self.prep["rondas_extra"]
 
     def preguntas_disponibles(self):
+        """Preguntas que pueden salir en la mezcla (habilitadas y, salvo que se pida, jugables)."""
         incluir = self.prep["incluir_poco_jugables"]
         return [pid for pid, p in self.preguntas.items() if p.get("habilitada", True) and (p.get("jugable", True) or incluir)]
 
     def multiplicador(self, numero_ronda):
+        """Multiplicador del banco para la ronda indicada (1 en las principales)."""
         principales = self.rondas_principales()
         if numero_ronda <= principales:
             return 1
@@ -179,6 +210,7 @@ class Juego:
         return extras[i] if i < len(extras) else (extras[-1] if extras else 1)
 
     def info_ronda(self, numero):
+        """Tipo, multiplicador y valor máximo de la ronda indicada."""
         principales = self.rondas_principales()
         extra = numero - principales if numero > principales else 0
         m = self.multiplicador(numero)
@@ -186,6 +218,7 @@ class Juego:
                 "multiplicador": m, "maximo": PUNTOS_POR_PREGUNTA * m}
 
     def plan_rondas(self):
+        """Lista con la información de todas las rondas configuradas (vista previa)."""
         return [self.info_ronda(n) for n in range(1, self.total_rondas() + 1)]
 
     def validar_preparacion(self):
@@ -211,6 +244,7 @@ class Juego:
         return errores
 
     def siguiente_pregunta(self):
+        """Primera pregunta del orden sorteado que todavía no se ha usado."""
         usadas = set(self.estado["preguntas_usadas"])
         for pid in self.prep["orden_preguntas"]:
             if pid not in usadas and pid in self.preguntas:
@@ -218,26 +252,31 @@ class Juego:
         return None
 
     def _evento(self, tipo, texto, equipo=None, extra=None):
+        """Registra el último evento: la pantalla pública lo usa para animaciones y sonidos."""
         self._evento_id += 1
         self.estado["evento"] = {"id": self._evento_id, "tipo": tipo, "texto": texto,
                                  "equipo": equipo, "extra": extra or {}}
 
     def _log(self, texto):
+        """Añade una línea a la bitácora visible en el panel (se guardan las últimas 300)."""
         self.estado["bitacora"].append({"hora": time.strftime("%H:%M:%S"), "texto": texto})
         self.estado["bitacora"] = self.estado["bitacora"][-300:]
 
     def _exigir_fase(self, *fases):
+        """Lanza ErrorJuego si la acción no corresponde a la fase actual."""
         if self.estado["fase"] not in fases:
             permitidas = ", ".join(FASES[f] for f in fases)
             raise ErrorJuego(f"Esta acción solo se puede usar en: {permitidas}. "
                              f"Fase actual: {FASES[self.estado['fase']]}.")
 
     def _equipo(self, valor):
+        """Valida que el equipo sea 0 o 1."""
         if valor not in (0, 1):
             raise ErrorJuego("Equipo no válido.")
         return valor
 
     def _respuesta_oculta(self, respuesta_id):
+        """Devuelve la respuesta si está en el tablero y aún oculta; si no, lanza ErrorJuego."""
         r = self.estado["ronda"]
         if respuesta_id not in r["tablero"]:
             raise ErrorJuego("Esa respuesta no está en el tablero de esta ronda.")
@@ -246,12 +285,14 @@ class Juego:
         return self._buscar_respuesta(respuesta_id)
 
     def _buscar_respuesta(self, respuesta_id):
+        """Busca una respuesta de la pregunta actual por su identificador."""
         for a in self.pregunta_actual()["respuestas"]:
             if a["id"] == respuesta_id:
                 return a
         raise ErrorJuego("Respuesta desconocida.")
 
     def _revelar(self, respuesta_id, equipo, como, sumar):
+        """Marca una respuesta como revelada y, si corresponde, suma sus puntos (× multiplicador) al banco."""
         r = self.estado["ronda"]
         a = self._buscar_respuesta(respuesta_id)
         pts = self.puntos_respuesta(a)
@@ -261,6 +302,7 @@ class Juego:
         return a, pts, sumado
 
     def _todas_reveladas(self):
+        """True si ya no quedan casillas ocultas en el tablero."""
         r = self.estado["ronda"]
         return all(x in r["reveladas"] for x in r["tablero"])
 
@@ -294,6 +336,7 @@ class Juego:
         return self.estado
 
     def _deshacer(self):
+        """Restaura el estado anterior a la última acción deshacible (conserva la bitácora)."""
         if not self.pila_deshacer:
             raise ErrorJuego("No hay acciones para deshacer.")
         anterior = self.pila_deshacer.pop()
@@ -308,6 +351,7 @@ class Juego:
         return self.estado
 
     def _a_configurar(self, accion):
+        """Cambia nombre del juego, nombres de equipos, reglas o audio."""
         cambios = accion["cambios"]
         reglas = set(cambios) - CONFIG_LIBRE
         desconocidas = set(cambios) - set(CONFIG_POR_DEFECTO)
@@ -338,6 +382,7 @@ class Juego:
         return None
 
     def _a_probar_sonido(self, accion):
+        """Pide a la pantalla pública que reproduzca un efecto de prueba."""
         nombre = accion.get("nombre")
         if nombre not in SONIDOS_DE_PRUEBA:
             raise ErrorJuego("Sonido desconocido.")
@@ -346,9 +391,11 @@ class Juego:
 
     # ------------------------------------------------------------------ preparación
     def _exigir_preparacion(self):
+        """Las acciones de preparación solo valen antes de confirmar la partida."""
         self._exigir_fase("preparacion")
 
     def _invalidar_sorteo_equipos(self):
+        """Anula el sorteo de equipos (cuando cambia la lista de participantes)."""
         if self.prep["sorteo_equipos"]:
             self.prep["sorteo_equipos"] = None
             for eq in self.cfg["equipos"]:
@@ -357,6 +404,7 @@ class Juego:
         return ""
 
     def _a_agregar_participantes(self, accion):
+        """Registra uno o varios nombres (ignora vacíos y repetidos sin distinguir mayúsculas)."""
         self._exigir_preparacion()
         existentes = {p["nombre"].casefold() for p in self.prep["participantes"]}
         agregados, repetidos = [], []
@@ -381,6 +429,7 @@ class Juego:
         return f"Se registraron {len(agregados)} participante(s){aviso}" + self._invalidar_sorteo_equipos()
 
     def _a_editar_participante(self, accion):
+        """Corrige el nombre de un participante."""
         self._exigir_preparacion()
         nombre = " ".join(str(accion["nombre"]).split())[:40]
         if not nombre:
@@ -395,6 +444,7 @@ class Juego:
         raise ErrorJuego("Participante no encontrado.")
 
     def _a_eliminar_participante(self, accion):
+        """Quita a un participante de la lista."""
         self._exigir_preparacion()
         antes = len(self.prep["participantes"])
         nombre = self.nombre_participante(accion["id"])
@@ -404,6 +454,7 @@ class Juego:
         return f"Se eliminó a «{nombre}»" + self._invalidar_sorteo_equipos()
 
     def _a_vaciar_participantes(self, accion):
+        """Borra toda la lista de participantes."""
         self._exigir_preparacion()
         if not self.prep["participantes"]:
             raise ErrorJuego("No hay participantes registrados.")
@@ -432,6 +483,7 @@ class Juego:
         return f"Sorteo de equipos: {self.nombre(0)} {a} · {self.nombre(1)} {b}"
 
     def _a_mezclar_preguntas(self, accion):
+        """Ordena al azar las preguntas disponibles (el orden queda guardado y es privado)."""
         self._exigir_preparacion()
         disponibles = self.preguntas_disponibles()
         if not disponibles:
@@ -444,6 +496,7 @@ class Juego:
         return f"Preguntas mezcladas al azar ({len(orden)} disponibles)"
 
     def _a_configurar_partida(self, accion):
+        """Configura rondas principales, adicionales, multiplicadores y preguntas poco jugables."""
         self._exigir_preparacion()
         p = self.prep
         if "rondas_principales" in accion:
@@ -476,6 +529,7 @@ class Juego:
                 + (f" (×{', ×'.join(map(str, mult))})" if mult else "") + msg)
 
     def _a_confirmar_partida(self, accion):
+        """Valida la preparación y fija equipos, orden de preguntas y número de rondas."""
         self._exigir_preparacion()
         errores = self.validar_preparacion()
         if errores:
@@ -505,6 +559,7 @@ class Juego:
 
     # ------------------------------------------------------------------ líderes
     def info_lideres(self):
+        """Para cada equipo: integrantes que aún no han sido líderes en el ciclo actual."""
         lid = self.estado["lideres"]
         info = []
         for i, eq in enumerate(self.cfg["equipos"]):
@@ -561,6 +616,7 @@ class Juego:
 
     # ------------------------------------------------------------------ rondas
     def _a_iniciar_ronda(self, accion):
+        """Empieza la ronda con la siguiente pregunta sorteada (o la indicada) y los líderes sorteados."""
         self._exigir_fase("lideres")
         jugadas = len(self.estado["historial_rondas"])
         numero = jugadas + 1
@@ -623,6 +679,7 @@ class Juego:
         return f"Ronda {r['numero']} cancelada (no se asignaron puntos; la pregunta vuelve a estar disponible)"
 
     def _a_primero_en_responder(self, accion):
+        """Registra qué equipo levantó la mano primero en Google Meet."""
         self._exigir_fase("cara_a_cara")
         eq = self._equipo(accion["equipo"])
         self.estado["ronda"]["cara_a_cara"]["primero"] = eq
@@ -630,6 +687,7 @@ class Juego:
         return f"Cara a cara: {self.nombre(eq)} levantó la mano primero"
 
     def _a_respuesta_cara_a_cara(self, accion):
+        """Respuesta de un líder en el cara a cara: revela una casilla o indica «no está»."""
         self._exigir_fase("cara_a_cara")
         eq = self._equipo(accion["equipo"])
         r = self.estado["ronda"]
@@ -669,6 +727,7 @@ class Juego:
         return min(orden, key=orden.get)
 
     def _a_ganador_cara_a_cara(self, accion):
+        """Fija al ganador del cara a cara (que luego decide jugar o pasar)."""
         self._exigir_fase("cara_a_cara")
         eq = self._equipo(accion["equipo"])
         r = self.estado["ronda"]
@@ -683,6 +742,7 @@ class Juego:
         return f"{self.nombre(eq)} gana el cara a cara"
 
     def _a_decidir(self, accion):
+        """El ganador del cara a cara juega la ronda o se la pasa al rival."""
         self._exigir_fase("decision")
         r = self.estado["ronda"]
         ganador = r["cara_a_cara"]["ganador"]
@@ -695,6 +755,7 @@ class Juego:
         return f"{self.nombre(ganador)} decide {'jugar' if accion['jugar'] else 'pasar'}: juega {self.nombre(juega)}"
 
     def _a_revelar(self, accion):
+        """Respuesta correcta durante la ronda (o revelar al final, sin puntos)."""
         rid = accion["respuesta_id"]
         fase = self.estado["fase"]
         if fase in ("resuelta", "asignada", "fin", "lideres") and self.estado["ronda"]:
@@ -715,6 +776,7 @@ class Juego:
         return desc
 
     def _a_revelar_restantes(self, accion):
+        """Muestra todas las casillas que nadie encontró (sin sumar puntos)."""
         self._exigir_fase("resuelta", "asignada", "fin")
         r = self.estado["ronda"]
         ocultas = [rid for rid in r["tablero"] if rid not in r["reveladas"]]
@@ -726,6 +788,7 @@ class Juego:
         return f"Se mostraron {len(ocultas)} respuestas restantes (sin puntos)"
 
     def _a_strike(self, accion):
+        """Respuesta incorrecta; al tercer strike se abre la oportunidad de robo."""
         self._exigir_fase("juego")
         r = self.estado["ronda"]
         if r["strikes"] >= 3:
@@ -742,6 +805,7 @@ class Juego:
         return f"Strike {n} para {self.nombre(r['control'])}"
 
     def _a_resolver_robo(self, accion):
+        """Resultado del único intento de robo del equipo rival."""
         self._exigir_fase("robo")
         r = self.estado["ronda"]
         if r["robo"]["resultado"] is not None:
@@ -759,6 +823,7 @@ class Juego:
         return f"Robo fallido de {self.nombre(ladron)}"
 
     def _resolver(self, ganador, motivo):
+        """Cierra la ronda con un ganador (falta asignar el banco)."""
         r = self.estado["ronda"]
         r["ganador"] = ganador
         self.estado["fase"] = "resuelta"
@@ -779,6 +844,7 @@ class Juego:
         return f"Ronda cerrada manualmente: gana {self.nombre(eq)}"
 
     def _a_asignar_banco(self, accion):
+        """Suma el banco al marcador del ganador (una sola vez) y lo anota en el historial."""
         self._exigir_fase("resuelta")
         r = self.estado["ronda"]
         if r["asignada"]:
@@ -798,6 +864,7 @@ class Juego:
         return f"Banco de {r['banco']} pts asignado a {self.nombre(eq)}"
 
     def _a_ajustar_puntaje(self, accion):
+        """Corrección manual del marcador (queda registrada en la bitácora)."""
         if self.estado["fase"] in ("preparacion", "lista") and not self.estado["historial_rondas"]:
             raise ErrorJuego("Aún no ha empezado el juego.")
         eq = self._equipo(accion["equipo"])
@@ -809,6 +876,7 @@ class Juego:
         return f"Ajuste manual {delta:+d} pts a {self.nombre(eq)}" + (f" ({motivo})" if motivo else "")
 
     def _a_finalizar_juego(self, accion):
+        """Termina la partida y calcula el ganador (o empate)."""
         fase = self.estado["fase"]
         if fase == "fin":
             raise ErrorJuego("El juego ya terminó.")
@@ -823,11 +891,13 @@ class Juego:
         return "Juego finalizado: " + texto
 
     def _a_reiniciar_marcador(self, accion):
+        """Pone el marcador en 0 - 0 (se puede deshacer)."""
         self.estado["puntajes"] = [0, 0]
         return "Marcador reiniciado a 0 - 0"
 
     # ------------------------------------------------------------------ vistas
     def _equipos_publicos(self):
+        """Equipos tal como se muestran al público: nombre, líder actual e integrantes."""
         actuales = self.estado["lideres"]["actuales"]
         en_ronda = self.estado["fase"] not in ("preparacion", "lista")
         info = self.info_lideres()
@@ -885,6 +955,7 @@ class Juego:
         }
 
     def vista_presentador(self):
+        """Todo el estado más datos calculados para el panel privado (nunca se envía al público)."""
         e = copy.deepcopy(self.estado)
         e["nombres_fases"] = FASES
         e["fase_nombre"] = FASES[e["fase"]]

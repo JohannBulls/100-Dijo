@@ -1,4 +1,12 @@
-// Panel privado del presentador: envía acciones al servidor y muestra toda la información.
+/**
+ * Panel privado del presentador.
+ *
+ * - Lee el estado completo (/api/presentador) y las preguntas (/api/preguntas).
+ * - Cada botón envía una acción a POST /api/accion junto con la versión del estado que
+ *   tenía la pantalla: si otra acción llegó antes (doble clic), el servidor la rechaza.
+ * - Pestañas: Preparación, Juego, Preguntas y respuestas, Reglas y opciones, Historial.
+ * - Los formularios no se redibujan mientras alguien escribe en ellos.
+ */
 const $ = (id) => document.getElementById(id);
 let estado = null;
 let datos = null;            // preguntas procesadas
@@ -9,6 +17,7 @@ let pestana = null;
 let ultimoSorteoVisto = null; // para animar el reparto de equipos una sola vez
 let ultimaMezclaVista = null;
 
+/** Escapa texto para insertarlo en HTML sin riesgo. */
 function esc(t) {
   return String(t ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
@@ -22,6 +31,7 @@ function boton(texto, accion, clase = "", confirmar = "", desactivado = false) {
   return `<button class="btn ${clase}" data-accion='${esc(JSON.stringify(accion))}'${confirmar ? ` data-confirmar="${esc(confirmar)}"` : ""}${desactivado ? " disabled" : ""}>${texto}</button>`;
 }
 
+/** Muestra un aviso temporal abajo (rojo = error, verde = confirmación). */
 function aviso(texto, ok = false) {
   const t = $("toast");
   t.textContent = texto;
@@ -30,6 +40,7 @@ function aviso(texto, ok = false) {
   aviso.t = setTimeout(() => t.classList.add("oculto"), ok ? 2500 : 7000);
 }
 
+/** Envía una acción al servidor; bloquea los botones mientras tanto para evitar dobles clics. */
 async function enviar(accion) {
   if (ocupado || !estado) return false;
   ocupado = true;
@@ -67,12 +78,14 @@ const textoRonda = (info) => info.tipo === "extra"
   ? `Ronda extra ${info.extra_n} (×${info.multiplicador}, hasta ${info.maximo} pts)`
   : `Ronda ${info.numero} (principal, hasta ${info.maximo} pts)`;
 
+/** Resumen del ciclo de líderes: cuántos faltan por ser líderes en cada equipo. */
 function estadoLideres() {
   const il = estado.info_lideres;
   return `<div class="estado-ronda"><span>♻️ Ciclo de líderes ${estado.lideres.ciclo}</span>
     ${[0, 1].map((i) => `<span title="${il[i].pendientes.map(persona).join(", ")}">${nom(i)}: faltan ${il[i].pendientes.length} de ${il[i].total} por ser líderes</span>`).join("")}</div>`;
 }
 
+/** Tarjetas con el resultado del último sorteo de líderes. */
 function resultadoSorteo() {
   const s = estado.lideres.sorteo;
   if (!s) return "";
@@ -82,6 +95,7 @@ function resultadoSorteo() {
     ${s.nuevo_ciclo ? `<p class="ayuda" style="color:#fbbf24"><b>♻️ Empezó el ciclo ${s.ciclo}:</b> todos ya habían sido líderes, así que vuelven a participar.</p>` : ""}`;
 }
 
+/** Desplegable para usar otra pregunta en lugar de la sorteada (excepcional). */
 function selectorAlternativo() {
   const usadas = new Set(estado.preguntas_usadas);
   const opciones = datos.preguntas.filter((p) => !usadas.has(p.id) && estado.tableros[p.id].ids.length > 0).map((p) =>
@@ -98,6 +112,7 @@ function equipoEnTurno() {
     robo: r.robo.equipo, resuelta: r.ganador, asignada: r.asignada_a }[estado.fase] ?? null;
 }
 
+/** Bloque «Siguiente ronda» con la pregunta sorteada y el botón de la ruleta de líderes. */
 function bloqueSiguienteRonda() {
   const e = estado;
   const numero = e.historial_rondas.length + 1;
@@ -110,6 +125,7 @@ function bloqueSiguienteRonda() {
       <div class="fila-botones">${boton(`🎡 Sortear líderes de la ronda ${numero}`, { tipo: "sortear_lideres" }, "morado grande")}</div></div>`;
 }
 
+/** Tarjeta principal de la pestaña Juego: muestra solo los botones de la fase actual. */
 function pintarControl() {
   const e = estado, r = e.ronda, c = $("control");
   const rondasRestantes = e.total_rondas - e.historial_rondas.length;
@@ -223,6 +239,7 @@ function pintarControl() {
   }
 }
 
+/** Desplegable con las respuestas originales de una respuesta consolidada. */
 function detalleOriginales(a) {
   return `<details><summary>Ver ${a.originales.length} respuesta(s) original(es)</summary><ul>${a.originales.map((o) => `<li>«${esc(o.texto)}» <span style="color:#64748b">(fila ${o.fila})</span></li>`).join("")}</ul>${a.nota ? `<div class="ayuda">Nota: ${esc(a.nota)}</div>` : ""}
     ${a.reformulacion ? `<div class="ayuda">Reformulada. Original: «${esc(a.reformulacion.etiqueta_original)}». ${esc(a.reformulacion.motivo)}</div>` : ""}
@@ -230,6 +247,7 @@ function detalleOriginales(a) {
     ${a.nota_contenido ? `<div class="ayuda">Contenido: ${esc(a.nota_contenido)}</div>` : ""}</details>`;
 }
 
+/** Insignias de contenido: «en revisión» o «reformulada». */
 function marcasContenido(a) {
   return (a.revision_contenido ? ` <span class="insignia rojo" title="${esc(a.revision_contenido)}">⚠ en revisión · no va al tablero</span>` : "")
     + (a.reformulacion ? ` <span class="insignia oro" title="Original: ${esc(a.reformulacion.etiqueta_original)}">reformulada</span>` : "");
@@ -237,6 +255,7 @@ function marcasContenido(a) {
 
 const datosPuntos = (a, p) => `Frecuencia real: <b>${a.frecuencia}</b> de ${p.respuestas_validas} personas · ${a.en_tablero ? `Puntos: <b>${a.puntos}</b>` : `No puntúa (${esc(a.motivo_fuera || "fuera del tablero")})`}`;
 
+/** Lista privada de respuestas de la pregunta actual, con sus botones según la fase. */
 function pintarRespuestas() {
   const e = estado, r = e.ronda, c = $("respuestas");
   if (!r) {
@@ -276,6 +295,7 @@ function pintarRespuestas() {
       <ul class="lista-resp">${fuera.map((a) => `<li class="resp fuera"><span class="pos">–</span><div><div class="etq">${esc(a.etiqueta)}${marcasContenido(a)}</div><div class="datos">${datosPuntos(a, p)}</div></div><div></div>${detalleOriginales(a)}</li>`).join("")}</ul>` : ""}`;
 }
 
+/** Marcador, banco, strikes y estado del ciclo de líderes. */
 function pintarMarcador() {
   const e = estado, r = e.ronda, turno = equipoEnTurno();
   const enRonda = r && !["lista", "lideres", "preparacion"].includes(e.fase);
@@ -294,6 +314,7 @@ const NOMBRES_SONIDOS = { musica: "Música de entrada", correcta: "Respuesta cor
   puntos: "Puntos ganados (fanfarria y aplausos)", ruleta: "Ruleta de líderes", lider: "Revelación del líder",
   ronda_extra: "Entrada a ronda extra", fanfarria_final: "Final del juego" };
 
+/** Tarjeta de sonido: interruptores, volumen, música y prueba de efectos. */
 function pintarAudio(forzar) {
   if (!forzar && formularioOcupado("audio")) return;
   const c = estado.config;
@@ -327,11 +348,13 @@ function formularioOcupado(id) {
   const el = $(id);
   return el.contains(document.activeElement) || el.dataset.editando === "1";
 }
+/** Marca un formulario como «en edición» al escribir en él. */
 function marcarEdicion(id) {
   const el = $(id);
   el.addEventListener("input", () => (el.dataset.editando = "1"));
 }
 
+/** Integrantes de cada equipo con su estado de líder (👑 actual, ✔ ya fue líder). */
 function pintarEquiposForm() {
   const iv = estado.equipos_vista;
   $("equipos-form").innerHTML = `<h2>Equipos</h2>
@@ -344,6 +367,7 @@ function pintarEquiposForm() {
     <p class="ayuda">👑 líder actual · ✔ ya fue líder en este ciclo. Los nombres de los equipos se cambian en la pestaña Preparación.</p>`;
 }
 
+/** Formulario de ajuste manual del marcador. */
 function pintarAjuste(forzar) {
   if (!forzar && formularioOcupado("ajuste")) return;
   $("ajuste").dataset.editando = "0";
@@ -363,6 +387,7 @@ function pintarAjuste(forzar) {
   };
 }
 
+/** Últimas `n` acciones registradas. */
 function pintarBitacora(id, n) {
   const items = estado.bitacora.slice(-n).reverse();
   $(id).innerHTML = items.length ? items.map((b) => `<div><time>${b.hora}</time>${esc(b.texto)}</div>`).join("") : `<p class="ayuda">Aún no hay acciones.</p>`;
@@ -512,6 +537,7 @@ function pintarPreguntas() {
   pintarDetalle();
 }
 
+/** Detalle de una pregunta: respuestas, puntos, excluidas y notas de revisión. */
 function pintarDetalle() {
   const p = detalleId && pregunta(detalleId);
   const c = $("detalle-pregunta");
@@ -595,6 +621,7 @@ function pintar(forzarFormularios = false) {
   if (pestana === "historial") pintarHistorial();
 }
 
+/** Cambia de pestaña y la redibuja. */
 function cambiarPestana(t) {
   pestana = t;
   document.querySelectorAll("#pestanas button").forEach((b) => b.classList.toggle("activa", b.dataset.tab === t));
@@ -611,14 +638,19 @@ $("btn-publica").onclick = () => window.open("/publico", "pantalla_publica");
 
 async function sondear() { // «espera larga»: el servidor responde en cuanto algo cambia
   for (;;) {
+    let e;
     try {
       const url = estado ? `/api/presentador?esperar=${estado.version}` : "/api/presentador";
-      const e = await (await fetch(url, { cache: "no-store" })).json();
-      $("conexion").classList.remove("mal");
-      if (!ocupado && (!estado || e.version !== estado.version)) { estado = e; pintar(); }
-    } catch (err) {
+      e = await (await fetch(url, { cache: "no-store" })).json();
+    } catch (err) { // solo un fallo de red marca la conexión en rojo
       $("conexion").classList.add("mal");
       await new Promise((r) => setTimeout(r, 1000));
+      continue;
+    }
+    $("conexion").classList.remove("mal");
+    if (!ocupado && (!estado || e.version !== estado.version)) {
+      estado = e;
+      try { pintar(); } catch (err) { console.error("Error al dibujar el panel:", err); }
     }
   }
 }
