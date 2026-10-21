@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pantalla del concurso</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<main class="escenario" id="escenario">
+  <header class="barra-superior">
+    <div class="logo" id="logo">…</div>
+    <div class="info-ronda">
+      <span class="chip" id="chip-ronda">Ronda –</span>
+      <span class="chip multi oculto" id="chip-multi">×2</span>
+    </div>
+    <div class="banco"><small>Banco<br>de la ronda</small><b id="banco">0</b></div>
+  </header>
+
+  <section class="pregunta" id="pregunta"><span class="fase-aviso" id="fase-aviso"></span><span id="texto-pregunta"></span></section>
+
+  <section class="zona">
+    <div class="equipo e0" id="eq0">
+      <span class="etiqueta-turno">Tiene el turno</span>
+      <div class="nombre-eq" id="nombre0"></div>
+      <div class="puntaje" id="puntos0">0</div>
+      <div class="lider" id="lider0"></div>
+    </div>
+    <div class="tablero" id="tablero"></div>
+    <div class="equipo e1" id="eq1">
+      <span class="etiqueta-turno">Tiene el turno</span>
+      <div class="nombre-eq" id="nombre1"></div>
+      <div class="puntaje" id="puntos1">0</div>
+      <div class="lider" id="lider1"></div>
+    </div>
+  </section>
+
+  <footer class="pie">
+    <div class="historial-mini" id="hist0"></div>
+    <div>
+      <div class="strikes" id="strikes"><div class="x">X</div><div class="x">X</div><div class="x">X</div></div>
+      <div class="franja oculto" id="franja" style="margin-top:1vh"></div>
+    </div>
+    <div class="historial-mini" id="hist1"></div>
+  </footer>
+
+  <div class="portada" id="portada"></div>
+</main>
+<div class="capa" id="capa"></div>
+<div class="espectaculo oculto" id="espectaculo"></div>
+<div class="confeti" id="confeti"></div>
+<button class="activar-sonido oculto" id="activar-sonido">🔊 Clic aquí para activar el sonido</button>
+<div class="sin-conexion oculto" id="sin-conexion">Sin conexión con el juego…</div>
+<script src="sonidos.js"></script>
+<script src="espectaculos.js"></script>
+<script src="publico.js"></script>
+</body>
+</html>

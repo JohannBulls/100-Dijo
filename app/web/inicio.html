@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inicio del juego</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body class="inicio">
+<div class="caja">
+  <h1 id="titulo">Juego de encuestas</h1>
+  <p>Abre <b>dos ventanas</b>: la pantalla pública (la que compartes en Google Meet) y el panel privado (para controlar el juego). Las dos se sincronizan solas.</p>
+  <div class="botones">
+    <a class="tarjeta publica" href="/publico" target="pantalla_publica">
+      <strong>📺 Pantalla pública</strong>
+      <span>Compártela en Google Meet: «Presentar ahora» → «Una pestaña» y marca «Compartir también el audio de la pestaña». No tiene botones ni respuestas ocultas.</span>
+    </a>
+    <a class="tarjeta privada" href="/presentador" target="panel_presentador">
+      <strong>🔒 Panel del presentador</strong>
+      <span>Solo para los presentadores. ¡No la compartas! Aquí están todas las respuestas y los botones.</span>
+    </a>
+  </div>
+  <p class="aviso">Para cerrar el juego, cierra la ventana negra del servidor. La partida queda guardada automáticamente.</p>
+</div>
+<script>
+fetch("/api/publico").then((r) => r.json()).then((e) => { document.getElementById("titulo").textContent = e.titulo; document.title = e.titulo; }).catch(() => {});
+</script>
+</body>
+</html>

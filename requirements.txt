@@ -1,0 +1,6 @@
+# Dependencias del proyecto (se instalan en el entorno virtual .venv).
+# El servidor del juego solo usa la biblioteca estándar de Python.
+# openpyxl se necesita para leer el Excel original y escribir el reporte
+# datos/preguntas_procesadas.xlsx (PROCESAR_EXCEL.bat y las pruebas).
+# 3.1.5 es compatible con Python 3.8 a 3.14.
+openpyxl==3.1.5

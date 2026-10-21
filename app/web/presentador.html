@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRIVADO · Panel del presentador</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body class="panel">
+<header class="panel-cabecera">
+  <span class="privado">PRIVADO · NO COMPARTIR</span>
+  <h1 id="titulo">Panel del presentador</h1>
+  <span class="fase" id="fase">…</span>
+  <div class="der">
+    <span class="punto-conexion" id="conexion" title="Conexión con el juego"></span>
+    <button class="btn oro" id="btn-deshacer" title="Deshace la última acción">↩ Deshacer</button>
+    <button class="btn azul" id="btn-publica">📺 Abrir pantalla pública</button>
+  </div>
+</header>
+<nav class="pestanas" id="pestanas">
+  <button data-tab="preparacion">🧩 Preparación</button>
+  <button data-tab="juego" class="activa">🎮 Juego</button>
+  <button data-tab="preguntas">📋 Preguntas y respuestas</button>
+  <button data-tab="reglas">⚙️ Reglas y opciones</button>
+  <button data-tab="historial">🕘 Historial</button>
+</nav>
+<div class="contenido">
+  <section id="tab-preparacion" class="oculto">
+    <div class="rejilla">
+      <div>
+        <div class="tarjeta-p" id="prep-participantes"></div>
+        <div class="tarjeta-p" id="prep-equipos"></div>
+        <div class="tarjeta-p" id="prep-preguntas"></div>
+      </div>
+      <div>
+        <div class="tarjeta-p" id="prep-rondas"></div>
+        <div class="tarjeta-p" id="prep-confirmar"></div>
+      </div>
+    </div>
+  </section>
+  <section id="tab-juego" class="oculto">
+    <div class="rejilla">
+      <div>
+        <div class="tarjeta-p" id="control"></div>
+        <div class="tarjeta-p" id="respuestas"></div>
+      </div>
+      <div>
+        <div class="tarjeta-p" id="marcador"></div>
+        <div class="tarjeta-p" id="audio"></div>
+        <div class="tarjeta-p" id="equipos-form"></div>
+        <div class="tarjeta-p" id="ajuste"></div>
+        <div class="tarjeta-p"><h2>Últimas acciones</h2><div class="bitacora" id="bitacora-corta"></div></div>
+      </div>
+    </div>
+  </section>
+  <section id="tab-preguntas" class="oculto">
+    <div class="rejilla">
+      <div class="tarjeta-p">
+        <h2>Todas las preguntas</h2>
+        <p class="ayuda">Haz clic en una pregunta para ver sus respuestas, frecuencias y respuestas originales. Las preguntas marcadas como «poco jugable» tienen menos de 3 respuestas que dijeron 2 o más personas.</p>
+        <input class="buscador" id="buscador" placeholder="Buscar pregunta o respuesta…">
+        <div class="fila-botones" style="margin:10px 0">
+          <label class="check"><input type="checkbox" id="filtro-nousadas"> Solo no usadas</label>
+          <label class="check"><input type="checkbox" id="filtro-jugables"> Solo jugables</label>
+        </div>
+        <div id="lista-preguntas"></div>
+      </div>
+      <div class="tarjeta-p" id="detalle-pregunta"></div>
+    </div>
+  </section>
+  <section id="tab-reglas" class="oculto"><div class="tarjeta-p" id="reglas"></div><div class="tarjeta-p" id="peligro"></div></section>
+  <section id="tab-historial" class="oculto">
+    <div class="tarjeta-p" id="historial"></div>
+    <div class="tarjeta-p"><h2>Bitácora completa</h2><div class="bitacora" id="bitacora" style="max-height:none"></div></div>
+  </section>
+</div>
+<div class="toast oculto" id="toast"></div>
+<script src="presentador.js"></script>
+</body>
+</html>

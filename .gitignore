@@ -1,0 +1,13 @@
+# Excel original de la encuesta: contiene los nombres de las personas que respondieron
+# (datos personales). NO se publica. Debe estar en la carpeta principal para PROCESAR_EXCEL.bat.
+/*.xlsx
+~$*.xlsx
+
+# Entorno de Python del proyecto (se crea solo con los .bat)
+.venv/
+__pycache__/
+*.pyc
+
+# Partida en curso (se crea al jugar)
+datos/partida_guardada.json
+datos/partida_guardada.json.tmp
