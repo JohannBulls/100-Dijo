@@ -2,6 +2,26 @@
 
 Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/). Versiones según [SemVer](https://semver.org/lang/es/).
 
+## [1.4.0] — 2026-10-21
+
+### Añadido
+- Identidad **100 Dijeron**: logo e icono originales (SVG), títulos de las páginas, portada, inicio y panel.
+- **Cara a cara con reglas automáticas:** turno para quien levantó la mano primero en Meet, la respuesta n.º 1 gana de inmediato, la respuesta de referencia que el rival debe superar, regla de empate configurable (desempate o «gana el primero»), 2 intentos por líder, cambio de ambos líderes si los dos fallan, animación del ganador con su motivo y corrección del ganador antes de empezar la ronda.
+- Botón **«Omitir cara a cara»**: el organizador elige qué equipo empieza.
+- **Revisión de jugabilidad:** cada pregunta habilitada tiene de 4 a 10 respuestas. Las que no llegan quedan pendientes, con detalle y propuesta, en `docs/REVISION_DE_PREGUNTAS.md` y en la hoja «Jugabilidad».
+- **Ejemplos de respuestas aceptadas** (textos reales de la encuesta) y **criterio para aceptar variantes** en el panel, el JSON y el Excel consolidado.
+- Documentos: `REGLAS_CARA_A_CARA.md`, `DICCIONARIO_DE_DATOS.md`, `PREGUNTAS_PENDIENTES.md` y `PRUEBAS.md`.
+- Pruebas: `test_cara_a_cara.py` y `test_datos_e_identidad.py`.
+
+### Cambiado
+- Nombre del proyecto: «100 Dijeron» (se retiró el nombre anterior).
+- P4 y P26: se unieron respuestas que expresan la misma idea para llegar a 4 respuestas.
+- Ortografía de 12 preguntas corregida (`texto_juego`); el texto original se conserva.
+- Solo las preguntas habilitadas entran en la mezcla (se quitó la opción de incluir preguntas poco jugables).
+
+### Privacidad
+- Los nombres de personas mencionadas en respuestas se reemplazan por «[nombre]». La lista está en `datos/privado/`, que no se publica.
+
 ## [1.3.0] — 2026-10-21
 
 ### Añadido

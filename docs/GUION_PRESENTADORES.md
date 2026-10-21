@@ -13,7 +13,7 @@ Entre corchetes [ ] está lo que hay que **pulsar en el panel**. Los textos son 
 
 *(Pantalla pública con la portada: título y los dos equipos.)* *[C: 🎵 Música de entrada]*
 
-**P:** ¡Buenas, buenas, Clouders! Bienvenidos al concurso más serio del año… mentira: al más divertido. ¡Esto es **41 Clouders Dijeron**!
+**P:** ¡Buenas, buenas, Clouders! Bienvenidos al concurso más serio del año… mentira: al más divertido. ¡Esto es **100 Dijeron**!
 
 **C:** Hace unos días 41 de ustedes respondieron una encuesta muy «sociológica». Hoy vamos a ver quién conoce mejor a esta empresa.
 
@@ -36,7 +36,7 @@ Entre corchetes [ ] está lo que hay que **pulsar en el panel**. Los textos son 
 **P:** Les explico rapidito cómo se juega.
 
 1. **Cara a cara.** En cada ronda, el líder de cada equipo se enfrenta. Leo la pregunta y el primero que **levante la mano en Meet** responde. Ojo: manda el orden de Meet, no la velocidad del grito.
-2. Gana el cara a cara quien diga la respuesta **más popular**. Ese equipo decide si **juega o pasa**.
+2. Si dice la respuesta **número 1**, gana de inmediato. Si dice otra respuesta del tablero, el otro líder tiene que **superarla en puntos**. Cada líder tiene **dos intentos**; si los dos fallan dos veces, ¡cambiamos de líderes! El ganador decide si su equipo **juega o pasa**.
 3. **Ronda.** El equipo que juega intenta descubrir todas las respuestas del tablero. El líder da la respuesta oficial, pero todos pueden ayudar en voz alta o por el chat.
 4. Cada respuesta que no está en el tablero es un **strike**. **Tres strikes** y pierden el turno.
 5. **Robo.** Con tres strikes, el otro equipo puede deliberar y dar **una sola respuesta**. Si está en el tablero, ¡se roba todos los puntos de la ronda! Si no, los puntos son para el equipo que estaba jugando.
@@ -83,10 +83,14 @@ Entre corchetes [ ] está lo que hay que **pulsar en el panel**. Los textos son 
   **P:** ¡Está en el tablero! … en el puesto número **[posición]**.
   - Si es la n.º 1: **P:** ¡Es la respuesta número uno! ¡Gana el cara a cara!
   - Si no: **P:** Veamos si **[otro líder]** puede superarla. *(el otro responde)*
-- Si no está: *[C: «✗ [equipo]: no está»]*
+  - Si el otro la supera: **P:** ¡Más puntos! ¡**[equipo]** se lleva el cara a cara!
+  - Si no la supera o no está: **P:** ¡No alcanzó! El cara a cara es para **[equipo]**.
+- Si no está: *[C: «✗ No está (error 1 de 2)»]*
   **P:** ¡Uy, no está! Oportunidad para **[otro líder]**.
+- Si ambos fallan dos veces: *[C: 🎡 Cambiar a ambos líderes y repetir]*
+  **P:** ¡Nadie acertó! La ruleta elige a dos líderes nuevos… ¡a levantar la mano otra vez!
 
-*[C: Paso 3 → 🏆 Gana [equipo]]*
+*[El juego decide el ganador solo según las reglas; el C no pulsa nada más.]*
 
 **P:** ¡**[equipo]** gana el cara a cara! ¿Juegan o pasan?
 
@@ -162,7 +166,7 @@ Entre corchetes [ ] está lo que hay que **pulsar en el panel**. Los textos son 
 
 *[C: 🏁 Finalizar juego y mostrar ganador]* — la pantalla muestra el ganador y confeti.
 
-**P:** Y después de **[N]** rondas… el equipo ganador de **41 Clouders Dijeron** es… ¡**[equipo ganador]**!
+**P:** Y después de **[N]** rondas… el equipo ganador de **100 Dijeron** es… ¡**[equipo ganador]**!
 
 **C:** ¡Felicitaciones! Y a **[equipo perdedor]**: ustedes ganaron en actitud. *(o «¡Empate! Ganó la amistad»)*
 

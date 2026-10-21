@@ -9,7 +9,7 @@ El detalle completo está en `datos/preguntas_procesadas.xlsx`, hoja **«Revisi�
 - 33 interpretaciones ambiguas.
 - 8 notas diversas.
 - 4 respuestas en revisión de contenido.
-- 4 preguntas poco jugables.
+- Las preguntas pendientes de jugabilidad (ver sección G).
 - 3 reformulaciones.
 
 El tratamiento de contenido también está en la hoja **«Contenido»**. Para cambiar una agrupación, ver README → «Si cambias una agrupación».
@@ -25,12 +25,12 @@ El tratamiento de contenido también está en la hoja **«Contenido»**. Para ca
 | A3 | El tablero lo fija el procesamiento del Excel: **2 o más personas, máximo 8 respuestas**. Ya **no** se puede cambiar en «Reglas y opciones». | Si el juego pudiera cambiar el tablero, los puntos dejarían de sumar 100 o se calcularían distinto que en el Excel. Para cambiarlo, modifica `MIN_FRECUENCIA_TABLERO` / `MAX_TABLERO` en `app/procesar_excel.py` y vuelve a procesar. |
 | A4 | **Empates:** respuestas con la misma frecuencia reciben los mismos puntos siempre que sea posible. El sobrante del redondeo va a la respuesta más popular. **Único caso inevitable: P1**, con triple empate en el primer lugar (4 personas cada una): quedan 18, 17 y 17. | 100 no se puede dividir en tres partes iguales sin quitarles puntos a otras respuestas. |
 | A5 | **Empate en la 8.ª casilla:** entra la que va primero en orden alfabético. | — |
-| A6 | Una pregunta con **una sola** respuesta en el tablero le da los 100 puntos (P25 y P47). Por eso las 4 preguntas «poco jugables» (20, 25, 39 y 47) **no entran en la mezcla**, salvo que marques «Incluir también las preguntas poco jugables». | Evita rondas que se resuelven con una sola respuesta. |
+| A6 | Solo se juegan preguntas con **4 a 10 respuestas** en el tablero. Las que tienen menos quedan **pendientes** y no entran en la mezcla hasta que decidas (ver sección G). | Evita rondas que se resuelven con una o dos respuestas. |
 | A7 | Los puntos se calculan **una sola vez** al procesar y se guardan en el Excel consolidado y en el archivo del juego. Si editas a mano los puntos del Excel, el juego no los lee de ahí. | Para cambiar puntos, cambia agrupaciones o la regla y vuelve a ejecutar `PROCESAR_EXCEL.bat`. |
 | A8 | En un **robo exitoso**, los puntos de la respuesta robada **se suman** al banco, una sola vez. Aun así, el banco nunca supera 100 (× multiplicador), porque todo el tablero suma 100. | Desactivarlo en «Reglas y opciones». |
 | A9 | Decir una respuesta **ya revelada** no es strike: se pide otra. | Contarla como strike pulsando «Strike». |
 | A10 | El ganador del cara a cara puede **jugar o pasar**. | Desactivarlo: siempre juega el ganador. |
-| A11 | Nombre del juego: **«41 Clouders Dijeron»**. | Cualquier otro (Reglas y opciones). |
+| A11 | Nombre del juego: **«100 Dijeron»**. | Cualquier otro (Reglas y opciones). |
 | A12 | Si alguien dio **dos ideas en una respuesta**, cuenta **una vez**, en la primera idea (72 casos marcados como «compuesta»). | Contarla en ambas (cambiaría los totales). |
 
 ---
@@ -76,8 +76,8 @@ El tratamiento de contenido también está en la hoja **«Contenido»**. Para ca
 
 | Pregunta | Original | En pantalla | Motivo |
 |---|---|---|---|
-| P23 | «Nico un catorce» | **¡Hágame un catorce!** | Nombra a una persona concreta. |
-| P20 | «Hablo con Doriam?» | **¿Hablo con…?** | Nombre propio. |
+| P23 | «[nombre] un catorce» | **¡Hágame un catorce!** | Nombra a una persona concreta. |
+| P20 | «¿Hablo con [nombre]?» | **¿Hablo con…?** | Nombre propio. |
 | P5 | «Al presidente 2026 de Colombia» / «Abelardo de la Espriella» / «Políticos» | **A los políticos** | Nombra a personas concretas. |
 
 ### C3. En revisión manual: se cuentan en la frecuencia, pero **no salen en el tablero** hasta que decidas
@@ -140,15 +140,12 @@ Se dejaron **separadas** salvo que se indique lo contrario.
 
 ---
 
-## G. Preguntas poco jugables
+## G. Jugabilidad de las preguntas
 
-Con la configuración por defecto, estas tienen menos de 3 casillas con 2 o más personas:
-- **P20:** «Aló» 30, «Hola» 6.
-- **P25:** casi todas las respuestas son únicas.
-- **P39:** «Borrarla» 32.
-- **P47:** casi todas las respuestas son únicas.
-
-**P4** («Había trancón», 88 de 100 puntos) y **P14** («Médico», 82 de 100) tienen una respuesta dominante: el cara a cara se decide casi siempre con la primera respuesta.
+El reporte completo, con detalle y propuesta por pregunta, está en **[REVISION_DE_PREGUNTAS.md](REVISION_DE_PREGUNTAS.md)**. Resumen:
+- **Pendientes (deshabilitadas):** P14, P19, P20, P25, P39 y P47. Tienen menos de 4 respuestas dichas por 2 o más personas, y no se inventan respuestas para completarlas. Cómo decidir: [PREGUNTAS_PENDIENTES.md](PREGUNTAS_PENDIENTES.md).
+- **Mejoradas (revisa y aprueba):** P4 (se unieron los problemas de transporte) y P26 (se unieron las tareas de limpieza y las de planchar o doblar ropa).
+- **Con advertencia:** P21, P37 y P46 tienen una respuesta que concentra más del 60 % de los puntos.
 
 ---
 
@@ -156,5 +153,5 @@ Con la configuración por defecto, estas tienen menos de 3 casillas con 2 o más
 
 - La numeración del formulario salta del 48 al 50 (no existe la pregunta 49). Se conservó la numeración original.
 - La columna «Nombre» del Excel no se usa ni se muestra. La trazabilidad usa el **número de fila**.
-- Los textos de las preguntas se muestran tal cual están en el Excel (por ejemplo «Que excusa comun…»). Si quieres corregir su ortografía, dímelo y lo ajusto sin tocar el Excel.
+- La ortografía de 12 preguntas se corrigió para el juego (por ejemplo «Que excusa comun…» → «¿Qué excusa común…»). El texto original se conserva en `texto_original` y en la hoja «Preguntas»; el Excel no se toca.
 - **Python:** en este computador hay dos Python (3.14 y 3.12). Los `.bat` usan siempre el entorno del proyecto (`.venv`), con `openpyxl` 3.1.5 instalado según `requirements.txt`.

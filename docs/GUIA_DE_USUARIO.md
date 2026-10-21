@@ -31,7 +31,7 @@ Esta guía está pensada para alguien que nunca ha usado el juego. Léela una ve
 Usa **Google Chrome o Microsoft Edge**: son los que permiten compartir el audio de una pestaña.
 
 1. En Meet pulsa **Presentar ahora** (icono de pantalla con flecha).
-2. Elige **Una pestaña** (en algunas versiones: «Pestaña de Chrome») y selecciona la de la **pantalla pública**. Su título es el nombre del juego, «41 Clouders Dijeron».
+2. Elige **Una pestaña** (en algunas versiones: «Pestaña de Chrome») y selecciona la de la **pantalla pública**. Su título es el nombre del juego, «100 Dijeron».
 3. **Marca «Compartir también el audio de la pestaña»** (casilla abajo a la izquierda del selector). Sin esa casilla, los participantes **no** oirán los efectos.
 4. Pulsa **Compartir**.
 5. **Nunca elijas «Toda la pantalla»**: los participantes podrían ver el panel privado.
@@ -65,10 +65,10 @@ Mientras la partida no esté confirmada, el panel abre directamente esta pestañ
 
 ### Paso 3 — Orden de las preguntas
 
-1. Pulsa **🔀 Mezclar preguntas**. La aplicación ordena al azar las 47 preguntas jugables. La pantalla pública muestra cartas boca abajo que se barajan, **sin revelar ninguna pregunta**.
+1. Pulsa **🔀 Mezclar preguntas**. La aplicación ordena al azar las 45 preguntas habilitadas. La pantalla pública muestra cartas boca abajo que se barajan, **sin revelar ninguna pregunta**.
 2. En el panel ves el orden resultante: qué pregunta toca en la ronda 1, en la 2, etc. (las rondas extra en dorado; las que sobran quedan como «reserva»).
 3. Puedes **volver a mezclar** cuantas veces quieras. Al confirmar la partida, el orden queda fijo.
-4. Por defecto no entran las 4 preguntas «poco jugables» (20, 25, 39 y 47). Si necesitas más preguntas, marca **Incluir también las preguntas poco jugables** y vuelve a mezclar.
+4. Solo entran las preguntas **habilitadas** (de 4 a 10 respuestas). Las 6 pendientes de revisión (14, 19, 20, 25, 39 y 47) quedan fuera hasta que decidas qué hacer con ellas; ver [PREGUNTAS_PENDIENTES.md](PREGUNTAS_PENDIENTES.md).
 
 Cada pregunta se usa una sola vez en la partida.
 
@@ -128,13 +128,23 @@ Pulsa **▶ Iniciar ronda N**. Se usa automáticamente la siguiente pregunta del
 
 ### Paso C — Cara a cara
 
+Las reglas completas, con ejemplos, están en **[REGLAS_CARA_A_CARA.md](REGLAS_CARA_A_CARA.md)**. El juego aplica estas reglas solo: el copiloto únicamente registra lo que pasa.
+
 1. El presentador lee la pregunta. Los **líderes** de ambos equipos **levantan la mano en Google Meet**.
-2. **Google Meet decide quién fue primero** (Meet ordena las manos levantadas). El juego no puede detectarlo: el copiloto pulsa en el **Paso 1** el equipo que levantó la mano primero. Los botones muestran el nombre de cada líder.
-3. El líder dice su respuesta:
-   - Si coincide con una respuesta del tablero: en la lista de abajo, pulsa **«Lo dijo [equipo]»** en esa respuesta. Se revela y sus puntos entran al banco.
-   - Si no está en el tablero: pulsa **«✗ [equipo]: no está»**. En el cara a cara **no cuenta como strike**.
-4. Regla habitual: si el primero dio la respuesta n.º 1, gana de inmediato. Si no, responde el otro líder y gana quien tenga la respuesta con **más puntos** (si empatan, quien respondió primero).
-5. El panel muestra una **sugerencia** según los puntos. Tú decides: pulsa **🏆 Gana [equipo]**.
+2. **Google Meet decide quién fue primero** (Meet ordena las manos levantadas). El juego no puede detectarlo: el copiloto pulsa en el **Paso 1** el equipo que levantó la mano primero. Los botones muestran el nombre de cada líder. Se puede corregir mientras nadie haya respondido.
+3. El panel marca **«▶ LE TOCA RESPONDER»** sobre el líder con el turno. Ese líder dice su respuesta:
+   - Si coincide con una respuesta del tablero: en la lista de abajo, pulsa **«Lo dijo [equipo]»** en esa respuesta. Debajo de cada respuesta verás **«Se acepta: …»** con ejemplos reales de lo que escribió la gente y un criterio para aceptar variantes.
+   - Si no está en el tablero: pulsa **«✗ No está (error n de 2)»**.
+4. El juego decide el ganador:
+   - **Respuesta n.º 1** → gana de inmediato.
+   - **Otra respuesta válida** → queda como **referencia**; el otro líder debe dar una respuesta que valga **más puntos**. Si vale menos o no está, gana la referencia.
+   - **Empate en puntos** → por defecto, nueva respuesta de desempate (empieza quien levantó la mano primero). En «Reglas y opciones» puedes cambiarlo a «gana quien respondió primero».
+   - **«No está» sin referencia** → responde el otro líder.
+5. **Cada líder tiene 2 intentos.** Los errores del cara a cara se ven en la pantalla pública y **no son strikes** de la ronda. Si los dos líderes agotan sus 2 intentos, aparece **🎡 Cambiar a ambos líderes y repetir**: una ruleta elige dos líderes nuevos y el cara a cara empieza de nuevo (las casillas ya reveladas siguen visibles).
+6. Al ganar, el panel del equipo ganador brilla en la pantalla pública y aparece el motivo («¡Dio la respuesta número 1!», «¡Superó la respuesta rival!»…).
+7. **¿Hubo una disputa?** En «Elegir el ganador manualmente» puedes dar el cara a cara a un equipo. Y antes de que empiece la ronda, **«Corregir el ganador»** se lo pasa al otro equipo sin perder ni duplicar puntos.
+
+**Omitir el cara a cara.** Antes de que nadie responda, puedes pulsar **⏭ Omitir cara a cara: empieza [equipo]**. No se revela nada, no se registran errores y la ronda empieza directamente con el equipo que elijas.
 
 ### Paso D — ¿Jugar o pasar?
 
@@ -152,7 +162,7 @@ El equipo ganador decide si juega la ronda o se la pasa al rival. Pulsa **▶ [e
 4. Con **3 strikes** el turno se cierra y aparece **«¡Oportunidad de robo!»**.
 5. Si el equipo descubre **todas** las casillas, gana la ronda automáticamente («¡Tablero completo!») con los 100 puntos (o 100 × multiplicador).
 
-**¿Cómo decido si una respuesta «coincide»?** Debe significar lo mismo, aunque use otras palabras. Si dudas, abre **«Ver respuestas originales»** debajo de la respuesta: verás exactamente lo que escribió la gente.
+**¿Cómo decido si una respuesta «coincide»?** Debe significar lo mismo, aunque use otras palabras. Guíate por **«Se acepta: …»**: son ejemplos reales de la encuesta, y debajo está el criterio (qué aceptar y con qué otra casilla no confundirla). Si aún dudas, abre **«Ver respuestas originales»**: verás exactamente lo que escribió la gente.
 
 ### Paso F — Robo
 
@@ -214,7 +224,7 @@ El equipo que tiene el turno se ilumina con borde dorado; debajo aparece su **l�
 
 | Opción | Dónde | Por defecto |
 |---|---|---|
-| Nombre del juego | Reglas y opciones | 41 Clouders Dijeron |
+| Nombre del juego | Reglas y opciones | 100 Dijeron |
 | Rondas principales y adicionales, multiplicadores | **Preparación**, paso 4 | Automático (= equipo más numeroso), 0 adicionales |
 | Puntos de cada respuesta | No se eligen: vienen del Excel consolidado y suman 100 por pregunta | — |
 | Jugar o pasar | Reglas y opciones | Activado |
